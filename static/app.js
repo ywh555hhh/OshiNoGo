@@ -338,30 +338,10 @@ let recSessionTarget = 50;
 let recSessionFinished = false;
 let recSessionQueue = [];
 let recSessionIndex = 0;
-let recSessionPool = [];
 let activeKanaSets = new Set(["seion"]);
+let scriptMode = "hiragana"; // hiragana | katakana | mixed
 let recLogPage = 1;
 const REC_LOG_PAGE_SIZE = 50;
-
-// ② 乱序听写状态
-let dicCurrent = null;
-let dicStartTime = null;
-let dicStats = { total: 0, correct: 0, times: [] };
-
-// ③ 单词拼读状态
-let wordCurrent = null;
-let wordCount = 0;
-
-// 简单音效（答对 / 答错）
-let audioCtx = null;
-
-function getAudioContext() {
-  if (audioCtx) return audioCtx;
-  const Ctor = window.AudioContext || window.webkitAudioContext;
-  if (!Ctor) return null;
-  audioCtx = new Ctor();
-  return audioCtx;
-}
 
 function playResultSound(ok) {
   const ctx = getAudioContext();
@@ -395,10 +375,19 @@ function playResultSound(ok) {
 }
 
 function getActiveKanaPool() {
-  const pool = KANA.filter((item) => activeKanaSets.has(item.set || "seion"));
-  if (pool.length) return pool;
-  const seion = KANA.filter((item) => item.set === "seion");
-  return seion.length ? seion : KANA;
+  // 先按清浊拗音选择过滤
+  const bySet = KANA.filter((item) => activeKanaSets.has(item.set || "seion"));
+  // 再按文字种类过滤
+  let byScript;
+  if (scriptMode === "hiragana") {
+    byScript = bySet.filter((k) => k.kana.charCodeAt(0) <= 0x309f); // 平假名区
+  } else if (scriptMode === "katakana") {
+    byScript = bySet.filter((k) => k.kana.charCodeAt(0) >= 0x30a0 && k.kana.charCodeAt(0) <= 0x30ff);
+  } else {
+    byScript = bySet;
+  }
+  if (byScript.length) return byScript;
+  return bySet.length ? bySet : KANA;
 }
 
 function randomPick(array, exclude) {
@@ -518,12 +507,17 @@ function initRecognition() {
   const elSummaryBestWorst = document.getElementById("rec-summary-best-worst");
   const elSummaryWeakness = document.getElementById("rec-summary-weakness");
   const poolChips = document.querySelectorAll("[data-kana-set]");
+  const scriptChips = document.querySelectorAll("[data-script-mode]");
 
   function syncPoolChipsUI() {
     poolChips.forEach((chip) => {
       const id = chip.dataset.kanaSet;
       const active = activeKanaSets.has(id);
       chip.classList.toggle("pool-chip-active", active);
+    });
+    scriptChips.forEach((chip) => {
+      const id = chip.dataset.scriptMode;
+      chip.classList.toggle("pool-chip-active", id === scriptMode);
     });
   }
 
@@ -539,6 +533,22 @@ function initRecognition() {
         activeKanaSets.add(id);
       }
       syncPoolChipsUI();
+      // 题库变更时，重建本组题目队列
+      recSessionPool = getActiveKanaPool();
+      recSessionQueue = buildRecSessionQueue(recSessionTarget, recSessionPool);
+      recSessionIndex = 0;
+    });
+  });
+
+  scriptChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const id = chip.dataset.scriptMode;
+      if (!id) return;
+      scriptMode = id; // hiragana | katakana | mixed
+      syncPoolChipsUI();
+      recSessionPool = getActiveKanaPool();
+      recSessionQueue = buildRecSessionQueue(recSessionTarget, recSessionPool);
+      recSessionIndex = 0;
     });
   });
 

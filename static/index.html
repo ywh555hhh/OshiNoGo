@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>OshiNoGo · 五十音清音肌肉反应训练器</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -61,6 +62,13 @@
           <button class="pool-chip" data-kana-set="dakuon">浊音</button>
           <button class="pool-chip" data-kana-set="handakuon">半浊音(ぱ)</button>
           <button class="pool-chip" data-kana-set="youon">拗音</button>
+        </div>
+
+        <div class="script-controls">
+          <span class="pool-label">文字种类</span>
+          <button class="pool-chip pool-chip-active" data-script-mode="hiragana">平假名</button>
+          <button class="pool-chip" data-script-mode="katakana">片假名</button>
+          <button class="pool-chip" data-script-mode="mixed">混合</button>
         </div>
 
         <div class="session-controls">

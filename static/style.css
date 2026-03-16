@@ -448,37 +448,16 @@ button:active {
   transform: translateY(-1px);
 }
 
-.session-controls {
+.script-controls {
   margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   font-size: 0.8rem;
   color: var(--text-softer);
 }
 
-.session-controls input[type="number"] {
-  width: 90px;
-  padding: 5px 8px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(75, 85, 99, 0.5);
-  background: var(--surface-soft);
-  color: var(--text-main);
-  font-size: 0.8rem;
-}
-
-.session-status {
-  margin-left: auto;
-  font-size: 0.78rem;
-  color: var(--text-softer);
-}
-
-.session-status.active {
-  color: var(--accent-strong);
-}
-
-.log-tools {
   margin-top: 10px;
   display: flex;
   align-items: center;
