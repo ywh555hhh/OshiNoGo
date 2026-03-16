@@ -1,0 +1,17 @@
+[project]
+name = "OshiNoGo"
+version = "0.1.0"
+description = "Hiragana muscle reaction trainer (clear sounds only)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]"
+]
+
+[project.optional-dependencies]
+dev = []
+
+[tool.uv]
+
+[tool.uv.sources]

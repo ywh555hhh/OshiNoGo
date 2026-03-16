@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>OshiNoGo · 五十音清音肌肉反应训练器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo-row">
+        <div class="logo">OshiNoGo</div>
+        <div class="badge">清音 · 条件反射</div>
+        <button id="theme-toggle" class="theme-toggle">夜间</button>
+      </div>
+      <h1>五十音清音 · 肌肉反应训练</h1>
+      <p class="subtitle">
+        目标：任意单个假名 0.5 秒内完成「看形→读音 / 听音→写形」，零卡顿、零错误。
+      </p>
+      <p class="steps">
+        建议顺序：
+        <span>① 乱序认读</span>
+        <span>② 乱序听写</span>
+        <span>③ 纯平假名单词拼读</span>
+      </p>
+    </header>
+
+    <nav class="mode-switch">
+      <button data-mode="recognition" class="mode-btn active">
+        <span class="mode-index">①</span>
+        <span class="mode-title">乱序认读</span>
+        <span class="mode-desc">看形 → 罗马音</span>
+      </button>
+      <button data-mode="dictation" class="mode-btn">
+        <span class="mode-index">②</span>
+        <span class="mode-title">乱序听写</span>
+        <span class="mode-desc">听音 → 假名</span>
+      </button>
+      <button data-mode="words" class="mode-btn">
+        <span class="mode-index">③</span>
+        <span class="mode-title">单词拼读</span>
+        <span class="mode-desc">整词 → 发音</span>
+      </button>
+    </nav>
+
+    <main>
+      <!-- ① 乱序认读：看形 → 读音 -->
+      <section id="mode-recognition" class="mode-section active">
+        <div class="section-header">
+          <h2>① 乱序认读训练（形 → 音）</h2>
+          <p>
+            随机给出单个假名，不允许顺推（看到「ぬ」不能从「あいうえお」默背到「な行」）。
+            练到瞬时反应、没有思考轨迹。
+          </p>
+        </div>
+
+        <div class="pool-controls">
+          <span class="pool-label">题库</span>
+          <button class="pool-chip pool-chip-active" data-kana-set="seion">清音</button>
+          <button class="pool-chip" data-kana-set="dakuon">浊音</button>
+          <button class="pool-chip" data-kana-set="handakuon">半浊音(ぱ)</button>
+          <button class="pool-chip" data-kana-set="youon">拗音</button>
+        </div>
+
+        <div class="session-controls">
+          <label for="rec-session-size">本组题量</label>
+          <input
+            id="rec-session-size"
+            type="number"
+            min="10"
+            max="500"
+            step="10"
+            value="50"
+          />
+          <button id="rec-session-start" class="ghost small">开始新一组</button>
+          <span class="session-status" id="rec-session-status">未开始本组</span>
+        </div>
+
+        <div class="card">
+          <div class="card-main">
+            <div class="big-kana" id="rec-kana">あ</div>
+            <div class="reaction-timer" id="rec-timer">0 ms</div>
+          </div>
+
+          <div class="input-row">
+            <label for="rec-input">罗马音</label>
+            <input
+              id="rec-input"
+              type="text"
+              placeholder="例如：a / ka / shi"
+              autocomplete="off"
+            />
+            <button id="rec-submit">确认</button>
+            <button id="rec-skip" class="ghost">跳过</button>
+          </div>
+
+          <div class="feedback" id="rec-feedback"></div>
+
+          <div class="card-footer">
+            <div class="stats-block">
+              <div class="stats-label">当前组统计</div>
+              <div class="stats-value" id="rec-stats">已答：0 · 正确：0 · 准确率：0% · 平均反应：0 ms</div>
+            </div>
+            <div class="hint-inline">建议一组做满 200 题，再切换模式。</div>
+          </div>
+
+          <div class="log-tools">
+            <button id="rec-log-toggle" class="ghost small">查看本组日志</button>
+            <span class="log-tip">记录本组所有题目的对错与反应时间，仅保存在本页面。</span>
+          </div>
+
+          <div class="log-panel" id="rec-log-panel">
+            <div class="log-header-row">
+              <div class="log-header">本组答题日志（最新在上）</div>
+              <div class="log-pager">
+                <button id="rec-log-prev" class="ghost tiny">上一页</button>
+                <span id="rec-log-pager-info" class="log-pager-info">第 1/1 页 · 共 0 题</span>
+                <button id="rec-log-next" class="ghost tiny">下一页</button>
+              </div>
+            </div>
+            <div class="log-table-wrapper">
+              <table class="log-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>假名</th>
+                    <th>正确罗马音</th>
+                    <th>你的输入</th>
+                    <th>结果</th>
+                    <th>反应时间</th>
+                    <th>时间</th>
+                  </tr>
+                </thead>
+                <tbody id="rec-log-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="session-summary" id="rec-session-summary">
+            <div class="summary-header">本组训练报告</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">总题数</div>
+                <div class="summary-value" id="rec-summary-count">0 题</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">正确 / 错误</div>
+                <div class="summary-value" id="rec-summary-correct-wrong">0 / 0</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">准确率</div>
+                <div class="summary-value" id="rec-summary-accuracy">0%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">平均反应</div>
+                <div class="summary-value" id="rec-summary-avgtime">0 ms</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">最快 / 最慢</div>
+                <div class="summary-value" id="rec-summary-best-worst">-</div>
+              </div>
+            </div>
+            <div class="summary-weakness" id="rec-summary-weakness"></div>
+            <button id="rec-session-summary-close" class="ghost small">关闭报告</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ② 乱序听写：听音 → 写形 -->
+      <section id="mode-dictation" class="mode-section">
+        <div class="section-header">
+          <h2>② 乱序听写训练（音 → 形）</h2>
+          <p>
+            随机播放单个假名发音，立即写出对应平假名。
+            训练「音 → 形」的瞬时映射，这是日语听力的地基。
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-main horizontal">
+            <div class="audio-block">
+              <button id="dic-play" class="primary wide">播放假名</button>
+              <button id="dic-next" class="ghost small">换一个</button>
+              <div class="audio-hint">使用浏览器日语语音，第一次可能略有延迟。</div>
+            </div>
+            <div class="dictation-meta">
+              <div class="meta-label">当前反应时间</div>
+              <div class="meta-value" id="dic-timer">0 ms</div>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="dic-input">写出平假名</label>
+            <input
+              id="dic-input"
+              type="text"
+              placeholder="例如：あ、か、し...（单个假名 / 拗音）"
+              autocomplete="off"
+            />
+            <button id="dic-submit">确认</button>
+            <button id="dic-skip" class="ghost">跳过</button>
+          </div>
+
+          <div class="feedback" id="dic-feedback"></div>
+
+          <div class="card-footer">
+            <div class="stats-block">
+              <div class="stats-label">当前组统计</div>
+              <div class="stats-value" id="dic-stats">已答：0 · 正确：0 · 准确率：0% · 平均反应：0 ms</div>
+            </div>
+            <div class="hint-inline">建议闭眼听写，不要看任何假名表。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ③ 纯平假名单词拼读 -->
+      <section id="mode-words" class="mode-section">
+        <div class="section-header">
+          <h2>③ 纯平假名单词拼读</h2>
+          <p>
+            只用基础假名构成的简单日语单词（无汉字），训练直接读出整词发音，
+            把单个假名能力迁移到「词」这个最小表意单位。
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-main vertical">
+            <div class="big-word" id="word-display">ねこ</div>
+            <button id="word-play" class="primary">播放读音</button>
+          </div>
+
+          <div class="word-answer" id="word-answer">
+            <div class="answer-row">
+              <span class="answer-label">罗马音</span>
+              <span class="answer-value" id="word-romaji">neko</span>
+            </div>
+            <div class="answer-row">
+              <span class="answer-label">中文释义</span>
+              <span class="answer-value" id="word-meaning">猫，猫咪</span>
+            </div>
+          </div>
+
+          <div class="card-footer space-between">
+            <div class="actions-inline">
+              <button id="word-toggle-answer" class="ghost small">显示 / 隐藏答案</button>
+              <button id="word-next" class="ghost small">换一个单词</button>
+            </div>
+            <div class="stats-block compact">
+              <div class="stats-label">练习计数</div>
+              <div class="stats-value" id="word-stats">已练单词数：0</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="extra">
+      <details>
+        <summary>辅助查看：五十音清音表（训练时尽量不要看）</summary>
+        <div class="table-wrapper">
+          <table class="kana-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>a</th>
+                <th>i</th>
+                <th>u</th>
+                <th>e</th>
+                <th>o</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th>∅</th><td>あ</td><td>い</td><td>う</td><td>え</td><td>お</td></tr>
+              <tr><th>k</th><td>か</td><td>き</td><td>く</td><td>け</td><td>こ</td></tr>
+              <tr><th>s</th><td>さ</td><td>し</td><td>す</td><td>せ</td><td>そ</td></tr>
+              <tr><th>t</th><td>た</td><td>ち</td><td>つ</td><td>て</td><td>と</td></tr>
+              <tr><th>n</th><td>な</td><td>に</td><td>ぬ</td><td>ね</td><td>の</td></tr>
+              <tr><th>h</th><td>は</td><td>ひ</td><td>ふ</td><td>へ</td><td>ほ</td></tr>
+              <tr><th>m</th><td>ま</td><td>み</td><td>む</td><td>め</td><td>も</td></tr>
+              <tr><th>y</th><td>や</td><td></td><td>ゆ</td><td></td><td>よ</td></tr>
+              <tr><th>r</th><td>ら</td><td>り</td><td>る</td><td>れ</td><td>ろ</td></tr>
+              <tr><th>w</th><td>わ</td><td></td><td></td><td></td><td>を</td></tr>
+              <tr><th>n</th><td>ん</td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <footer>
+      <p>
+        建议：每个模式乱序至少 200～300 题，准确率 ≥ 98%，平均反应时间 &lt; 500ms，再进入下一阶段。
+      </p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
