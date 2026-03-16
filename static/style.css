@@ -697,16 +697,49 @@ footer {
 /* 小屏适配：主打手机端 */
 @media (max-width: 768px) {
   body {
-    padding: 16px 10px 24px;
+    padding: 0;
+    background: var(--bg);
   }
 
   .app {
-    padding: 16px 14px 18px;
-    border-radius: 16px;
+    padding: 12px 12px 16px;
+    border-radius: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    margin-bottom: 12px;
+  }
+
+  header h1 {
+    font-size: 1.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.82rem;
+  }
+
+  .steps {
+    display: none;
   }
 
   .mode-switch {
     grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card {
+    padding: 12px 12px 14px;
   }
 
   .card-main {
@@ -714,16 +747,20 @@ footer {
     align-items: stretch;
   }
 
+  .big-kana {
+    font-size: 3.4rem;
+  }
+
+  .big-word {
+    font-size: 2rem;
+  }
+
   .input-row {
     grid-template-columns: 1fr;
   }
 
-  .big-kana {
-    font-size: 3.6rem;
-  }
-
-  .big-word {
-    font-size: 2.2rem;
+  .input-row label {
+    font-size: 0.78rem;
   }
 
   .card-footer {
@@ -739,5 +776,10 @@ footer {
   .actions-inline button {
     flex: 1;
     justify-content: center;
+  }
+
+  .extra,
+  footer {
+    font-size: 0.75rem;
   }
 }
