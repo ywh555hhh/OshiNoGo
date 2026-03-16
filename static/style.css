@@ -707,6 +707,11 @@ footer {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    max-width: 100%;
+    margin: 0;
+    background: var(--bg);
+    border: none;
+    box-shadow: none;
   }
 
   header {
