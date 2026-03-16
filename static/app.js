@@ -133,6 +133,140 @@ const KANA = [
   { kana: "りゃ", romaji: "rya", set: "youon" },
   { kana: "りゅ", romaji: "ryu", set: "youon" },
   { kana: "りょ", romaji: "ryo", set: "youon" },
+
+  // 片假名清音
+  { kana: "ア", romaji: "a", set: "seion" },
+  { kana: "イ", romaji: "i", set: "seion" },
+  { kana: "ウ", romaji: "u", set: "seion" },
+  { kana: "エ", romaji: "e", set: "seion" },
+  { kana: "オ", romaji: "o", set: "seion" },
+
+  { kana: "カ", romaji: "ka", set: "seion" },
+  { kana: "キ", romaji: "ki", set: "seion" },
+  { kana: "ク", romaji: "ku", set: "seion" },
+  { kana: "ケ", romaji: "ke", set: "seion" },
+  { kana: "コ", romaji: "ko", set: "seion" },
+
+  { kana: "サ", romaji: "sa", set: "seion" },
+  { kana: "シ", romaji: "shi", set: "seion" },
+  { kana: "ス", romaji: "su", set: "seion" },
+  { kana: "セ", romaji: "se", set: "seion" },
+  { kana: "ソ", romaji: "so", set: "seion" },
+
+  { kana: "タ", romaji: "ta", set: "seion" },
+  { kana: "チ", romaji: "chi", set: "seion" },
+  { kana: "ツ", romaji: "tsu", set: "seion" },
+  { kana: "テ", romaji: "te", set: "seion" },
+  { kana: "ト", romaji: "to", set: "seion" },
+
+  { kana: "ナ", romaji: "na", set: "seion" },
+  { kana: "ニ", romaji: "ni", set: "seion" },
+  { kana: "ヌ", romaji: "nu", set: "seion" },
+  { kana: "ネ", romaji: "ne", set: "seion" },
+  { kana: "ノ", romaji: "no", set: "seion" },
+
+  { kana: "ハ", romaji: "ha", set: "seion" },
+  { kana: "ヒ", romaji: "hi", set: "seion" },
+  { kana: "フ", romaji: "fu", set: "seion" },
+  { kana: "ヘ", romaji: "he", set: "seion" },
+  { kana: "ホ", romaji: "ho", set: "seion" },
+
+  { kana: "マ", romaji: "ma", set: "seion" },
+  { kana: "ミ", romaji: "mi", set: "seion" },
+  { kana: "ム", romaji: "mu", set: "seion" },
+  { kana: "メ", romaji: "me", set: "seion" },
+  { kana: "モ", romaji: "mo", set: "seion" },
+
+  { kana: "ヤ", romaji: "ya", set: "seion" },
+  { kana: "ユ", romaji: "yu", set: "seion" },
+  { kana: "ヨ", romaji: "yo", set: "seion" },
+
+  { kana: "ラ", romaji: "ra", set: "seion" },
+  { kana: "リ", romaji: "ri", set: "seion" },
+  { kana: "ル", romaji: "ru", set: "seion" },
+  { kana: "レ", romaji: "re", set: "seion" },
+  { kana: "ロ", romaji: "ro", set: "seion" },
+
+  { kana: "ワ", romaji: "wa", set: "seion" },
+  { kana: "ヲ", romaji: "wo", set: "seion" },
+  { kana: "ン", romaji: "n", set: "seion" },
+
+  // 片假名浊音
+  { kana: "ガ", romaji: "ga", set: "dakuon" },
+  { kana: "ギ", romaji: "gi", set: "dakuon" },
+  { kana: "グ", romaji: "gu", set: "dakuon" },
+  { kana: "ゲ", romaji: "ge", set: "dakuon" },
+  { kana: "ゴ", romaji: "go", set: "dakuon" },
+
+  { kana: "ザ", romaji: "za", set: "dakuon" },
+  { kana: "ジ", romaji: "ji", set: "dakuon" },
+  { kana: "ズ", romaji: "zu", set: "dakuon" },
+  { kana: "ゼ", romaji: "ze", set: "dakuon" },
+  { kana: "ゾ", romaji: "zo", set: "dakuon" },
+
+  { kana: "ダ", romaji: "da", set: "dakuon" },
+  { kana: "ヂ", romaji: "ji", set: "dakuon" },
+  { kana: "ヅ", romaji: "zu", set: "dakuon" },
+  { kana: "デ", romaji: "de", set: "dakuon" },
+  { kana: "ド", romaji: "do", set: "dakuon" },
+
+  { kana: "バ", romaji: "ba", set: "dakuon" },
+  { kana: "ビ", romaji: "bi", set: "dakuon" },
+  { kana: "ブ", romaji: "bu", set: "dakuon" },
+  { kana: "ベ", romaji: "be", set: "dakuon" },
+  { kana: "ボ", romaji: "bo", set: "dakuon" },
+
+  // 片假名半浊音
+  { kana: "パ", romaji: "pa", set: "handakuon" },
+  { kana: "ピ", romaji: "pi", set: "handakuon" },
+  { kana: "プ", romaji: "pu", set: "handakuon" },
+  { kana: "ペ", romaji: "pe", set: "handakuon" },
+  { kana: "ポ", romaji: "po", set: "handakuon" },
+
+  // 片假名拗音
+  { kana: "キャ", romaji: "kya", set: "youon" },
+  { kana: "キュ", romaji: "kyu", set: "youon" },
+  { kana: "キョ", romaji: "kyo", set: "youon" },
+
+  { kana: "ギャ", romaji: "gya", set: "youon" },
+  { kana: "ギュ", romaji: "gyu", set: "youon" },
+  { kana: "ギョ", romaji: "gyo", set: "youon" },
+
+  { kana: "シャ", romaji: "sha", set: "youon" },
+  { kana: "シュ", romaji: "shu", set: "youon" },
+  { kana: "ショ", romaji: "sho", set: "youon" },
+
+  { kana: "ジャ", romaji: "ja", set: "youon" },
+  { kana: "ジュ", romaji: "ju", set: "youon" },
+  { kana: "ジョ", romaji: "jo", set: "youon" },
+
+  { kana: "チャ", romaji: "cha", set: "youon" },
+  { kana: "チュ", romaji: "chu", set: "youon" },
+  { kana: "チョ", romaji: "cho", set: "youon" },
+
+  { kana: "ニャ", romaji: "nya", set: "youon" },
+  { kana: "ニュ", romaji: "nyu", set: "youon" },
+  { kana: "ニョ", romaji: "nyo", set: "youon" },
+
+  { kana: "ヒャ", romaji: "hya", set: "youon" },
+  { kana: "ヒュ", romaji: "hyu", set: "youon" },
+  { kana: "ヒョ", romaji: "hyo", set: "youon" },
+
+  { kana: "ビャ", romaji: "bya", set: "youon" },
+  { kana: "ビュ", romaji: "byu", set: "youon" },
+  { kana: "ビョ", romaji: "byo", set: "youon" },
+
+  { kana: "ピャ", romaji: "pya", set: "youon" },
+  { kana: "ピュ", romaji: "pyu", set: "youon" },
+  { kana: "ピョ", romaji: "pyo", set: "youon" },
+
+  { kana: "ミャ", romaji: "mya", set: "youon" },
+  { kana: "ミュ", romaji: "myu", set: "youon" },
+  { kana: "ミョ", romaji: "myo", set: "youon" },
+
+  { kana: "リャ", romaji: "rya", set: "youon" },
+  { kana: "リュ", romaji: "ryu", set: "youon" },
+  { kana: "リョ", romaji: "ryo", set: "youon" },
 ];
 
 // 只包含基础假名的简单词汇，用于整词拼读
