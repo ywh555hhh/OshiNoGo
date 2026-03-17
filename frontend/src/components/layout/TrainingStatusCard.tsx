@@ -1,6 +1,5 @@
 import { BookOpenText, ChevronRight, RotateCcw } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { StoredSessionSummary, TrainingMode } from '@/types/training'
@@ -33,15 +32,13 @@ export function TrainingStatusCard({
   onOpenHelp,
 }: TrainingStatusCardProps) {
   return (
-    <Card className="border-dashed bg-muted/30 shadow-none">
+    <Card className="border-dashed bg-muted/25 shadow-none">
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="rounded-full bg-primary/10 text-primary">
-                {onboardingCompleted ? '继续训练' : '首次使用'}
-              </Badge>
-              <Badge className="rounded-full bg-background text-foreground">上次停在：{MODE_LABELS[lastMode]}</Badge>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="font-semibold text-foreground">{onboardingCompleted ? '继续训练' : '首次使用'}</span>
+              <span className="text-muted-foreground">上次停在：{MODE_LABELS[lastMode]}</span>
             </div>
             <p className="text-sm leading-6 text-muted-foreground">
               {onboardingCompleted
@@ -83,10 +80,10 @@ export function TrainingStatusCard({
             actionLabel="开始听写"
             onAction={() => onModeChange('dictation')}
           />
-          <div className="rounded-2xl border bg-background p-4">
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
             <div className="text-sm font-semibold">words</div>
             <p className="mt-2 text-sm text-muted-foreground">已累计练习 {practicedCount} 个单词，适合做轻量迁移检查。</p>
-            <Button variant="ghost" size="sm" className="mt-3 px-0" onClick={() => onModeChange('words')}>
+            <Button variant="outline" size="sm" className="mt-3 w-fit" onClick={() => onModeChange('words')}>
               <RotateCcw className="h-4 w-4" />
               打开单词模式
             </Button>
@@ -111,7 +108,7 @@ function StatusItem({
   onAction: () => void
 }) {
   return (
-    <div className="rounded-2xl border bg-background p-4">
+    <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
       <div className="text-sm font-semibold">{title}</div>
       {summary ? (
         <div className="mt-2 space-y-1 text-sm text-muted-foreground">
@@ -122,7 +119,7 @@ function StatusItem({
       ) : (
         <p className="mt-2 text-sm text-muted-foreground">{fallback}</p>
       )}
-      <Button variant="ghost" size="sm" className="mt-3 px-0" onClick={onAction}>
+      <Button variant="outline" size="sm" className="mt-3 w-fit" onClick={onAction}>
         {actionLabel}
       </Button>
     </div>

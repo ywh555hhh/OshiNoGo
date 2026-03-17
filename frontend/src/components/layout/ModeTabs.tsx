@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TrainingMode } from '@/types/training'
 
@@ -51,9 +50,11 @@ export function ModeTabs({ mode, onModeChange, recognition, dictation, words }: 
           ))}
         </TabsList>
 
-        <div className="flex flex-col gap-2 rounded-2xl border bg-muted/25 p-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           <div>{MODE_COPY[mode].helper}</div>
-          <Badge className="w-fit rounded-full bg-primary/10 text-primary">推荐顺序：recognition → dictation → words</Badge>
+          <div className="mt-1 text-xs text-muted-foreground/90 sm:text-sm">
+            推荐顺序：recognition → dictation → words
+          </div>
         </div>
       </div>
 
