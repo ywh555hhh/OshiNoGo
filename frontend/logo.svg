@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" role="img" aria-labelledby="title desc">
+  <title id="title">OshiNoGo logo</title>
+  <desc id="desc">Wordmark logo for OshiNoGo with kana-inspired badge.</desc>
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(8 8)">
+    <rect width="80" height="80" rx="22" fill="url(#badge)" />
+    <circle cx="40" cy="40" r="20" fill="none" stroke="#fff7ed" stroke-width="8" />
+    <path d="M54 19c7 4 12 11 12 20 0 14-10 25-24 25-5 0-9-1-13-3" fill="none" stroke="#7f1d1d" stroke-linecap="round" stroke-width="5" opacity="0.85" />
+    <circle cx="58" cy="20" r="5" fill="#fff" opacity="0.95" />
+  </g>
+  <g fill="#18181b">
+    <text x="106" y="42" font-size="32" font-weight="700" font-family="Inter, ui-sans-serif, system-ui, sans-serif">OshiNoGo</text>
+    <text x="106" y="70" font-size="16" font-weight="500" fill="#52525b" font-family="Inter, ui-sans-serif, system-ui, sans-serif">五十音肌肉反应训练器 · kana 也是 Kana</text>
+  </g>
+</svg>
