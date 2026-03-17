@@ -1,4 +1,4 @@
-import { BookOpenText, ChevronRight, RotateCcw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,7 +12,6 @@ interface TrainingStatusCardProps {
   practicedCount: number
   storageWarning: string | null
   onModeChange: (mode: TrainingMode) => void
-  onOpenHelp: () => void
 }
 
 const MODE_LABELS: Record<TrainingMode, string> = {
@@ -29,34 +28,20 @@ export function TrainingStatusCard({
   practicedCount,
   storageWarning,
   onModeChange,
-  onOpenHelp,
 }: TrainingStatusCardProps) {
   return (
-    <Card className="border-dashed bg-muted/25 shadow-none">
+    <Card className="border-dashed bg-muted/20 shadow-none">
       <CardContent className="space-y-4 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <span className="font-semibold text-foreground">{onboardingCompleted ? '继续训练' : '首次使用'}</span>
-              <span className="text-muted-foreground">上次停在：{MODE_LABELS[lastMode]}</span>
-            </div>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {onboardingCompleted
-                ? '刷新后会恢复上次模式、主题、训练偏好与基础统计。'
-                : '建议先看一遍说明，再从 recognition 开始。'}
-            </p>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="font-semibold text-foreground">{onboardingCompleted ? '继续训练' : '首次使用'}</span>
+            <span className="text-muted-foreground">上次停在：{MODE_LABELS[lastMode]}</span>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={onOpenHelp}>
-              <BookOpenText className="h-4 w-4" />
-              查看说明
-            </Button>
-            <Button size="sm" onClick={() => onModeChange(lastMode)}>
-              继续上次训练
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {onboardingCompleted
+              ? '刷新后会恢复上次模式、主题、训练偏好与基础统计。'
+              : '建议先从 recognition 开始，把反应速度拉起来。'}
+          </p>
         </div>
 
         {storageWarning ? (

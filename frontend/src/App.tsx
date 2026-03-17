@@ -30,12 +30,29 @@ function App() {
     <>
       <AppShell
         header={
+          <AppHeader
+            themeLabel={label}
+            onOpenHelp={() => setOnboardingOpen(true)}
+            onToggleTheme={toggleTheme}
+          />
+        }
+        tabs={
           <div className="space-y-6">
-            <AppHeader
-              themeLabel={label}
-              onOpenHelp={() => setOnboardingOpen(true)}
-              onToggleTheme={toggleTheme}
+            <ModeTabs
+              mode={preferences.lastMode}
+              onModeChange={setLastMode}
+              recognition={
+                <RecognitionPanel
+                  preferences={preferences.recognition}
+                  onPreferencesChange={updateRecognition}
+                />
+              }
+              dictation={
+                <DictationPanel preferences={preferences.dictation} onPreferencesChange={updateDictation} />
+              }
+              words={<WordsPanel preferences={preferences.words} onPreferencesChange={updateWords} />}
             />
+
             <TrainingStatusCard
               lastMode={preferences.lastMode}
               onboardingCompleted={preferences.onboardingCompleted}
@@ -44,25 +61,8 @@ function App() {
               practicedCount={preferences.words.practicedCount}
               storageWarning={isPersistenceDegraded ? persistenceWarning : null}
               onModeChange={setLastMode}
-              onOpenHelp={() => setOnboardingOpen(true)}
             />
           </div>
-        }
-        tabs={
-          <ModeTabs
-            mode={preferences.lastMode}
-            onModeChange={setLastMode}
-            recognition={
-              <RecognitionPanel
-                preferences={preferences.recognition}
-                onPreferencesChange={updateRecognition}
-              />
-            }
-            dictation={
-              <DictationPanel preferences={preferences.dictation} onPreferencesChange={updateDictation} />
-            }
-            words={<WordsPanel preferences={preferences.words} onPreferencesChange={updateWords} />}
-          />
         }
       />
 

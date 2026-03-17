@@ -35,32 +35,40 @@ const MODE_COPY: Record<TrainingMode, { index: string; title: string; descriptio
 export function ModeTabs({ mode, onModeChange, recognition, dictation, words }: ModeTabsProps) {
   return (
     <Tabs value={mode} onValueChange={(value) => onModeChange(value as TrainingMode)}>
-      <div className="space-y-3">
-        <TabsList className="grid w-full grid-cols-1 gap-2 md:grid-cols-3">
+      <TabsContent value="recognition" className="mt-0">
+        {recognition}
+      </TabsContent>
+      <TabsContent value="dictation" className="mt-0">
+        {dictation}
+      </TabsContent>
+      <TabsContent value="words" className="mt-0">
+        {words}
+      </TabsContent>
+
+      <div className="mt-5 space-y-3">
+        <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+          <div>{MODE_COPY[mode].helper}</div>
+          <div className="mt-1 text-xs text-muted-foreground/90 sm:text-sm">推荐顺序：recognition → dictation → words</div>
+        </div>
+
+        <TabsList className="grid w-full grid-cols-1 gap-2 bg-transparent p-0 sm:grid-cols-3">
           {Object.entries(MODE_COPY).map(([value, copy]) => (
             <TabsTrigger
               key={value}
               value={value}
-              className="min-h-[96px] flex-col items-start justify-center gap-1"
+              className="min-h-[72px] justify-start rounded-2xl border bg-muted/35 px-4 py-3 data-[state=active]:bg-background"
             >
-              <span className="text-xs text-muted-foreground">{copy.index}</span>
-              <span className="text-base font-semibold">{copy.title}</span>
-              <span className="text-xs text-muted-foreground">{copy.description}</span>
+              <div className="flex items-start gap-3 text-left">
+                <span className="pt-0.5 text-xs text-muted-foreground">{copy.index}</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-foreground">{copy.title}</span>
+                  <span className="block text-xs text-muted-foreground">{copy.description}</span>
+                </span>
+              </div>
             </TabsTrigger>
           ))}
         </TabsList>
-
-        <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-          <div>{MODE_COPY[mode].helper}</div>
-          <div className="mt-1 text-xs text-muted-foreground/90 sm:text-sm">
-            推荐顺序：recognition → dictation → words
-          </div>
-        </div>
       </div>
-
-      <TabsContent value="recognition">{recognition}</TabsContent>
-      <TabsContent value="dictation">{dictation}</TabsContent>
-      <TabsContent value="words">{words}</TabsContent>
     </Tabs>
   )
 }

@@ -27,12 +27,12 @@ export function StatsBar({
   highlight,
 }: StatsBarProps) {
   return (
-    <Card className="border-dashed bg-muted/35 shadow-none">
-      <CardContent className="space-y-4 p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+    <Card className="border-dashed bg-muted/30 shadow-none">
+      <CardContent className="space-y-4 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-1">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm leading-6 text-muted-foreground">{description}</p>
           </div>
           {highlight ? (
             <Badge className="rounded-full border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-300">
@@ -42,14 +42,14 @@ export function StatsBar({
         </div>
 
         <div className="space-y-2" aria-label={progressLabel}>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground sm:text-sm">
             <span>{progressLabel}</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <Progress value={progress} aria-label={progressLabel} />
+          <Progress value={progress} className="h-3" aria-label={progressLabel} />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatItem label="已答" value={`${total}`} />
           <StatItem label="正确" value={`${correct}`} />
           <StatItem label="准确率" value={`${accuracy.toFixed(1)}%`} />

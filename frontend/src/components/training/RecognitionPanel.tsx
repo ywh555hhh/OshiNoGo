@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Keyboard, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Keyboard } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 
 import { KanaFilterBar } from '@/components/training/KanaFilterBar'
@@ -68,7 +68,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="mx-auto max-w-4xl space-y-4">
         <Card>
           <CardHeader className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -90,17 +90,49 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
-              <div className="rounded-[1.75rem] border bg-muted/30 p-6 text-center sm:p-8">
-                <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">current kana</div>
-                <div className="mt-4 text-[4rem] font-semibold leading-none sm:text-[5.5rem]">{current?.kana ?? '—'}</div>
-                <div className="mt-4 text-sm text-muted-foreground">当前反应计时：{formatMs(reactionMs)} ms</div>
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  <Badge className="bg-pink-400/10 text-pink-700 dark:text-pink-200">
-                    <Sparkles className="mr-1 h-3.5 w-3.5" />
-                    kana / Kana 双关模式已开启
-                  </Badge>
-                </div>
+            <div className="rounded-[1.75rem] border bg-muted/30 p-6 text-center sm:p-8">
+              <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">current kana</div>
+              <div className="mt-4 text-[4rem] font-semibold leading-none sm:text-[5.5rem]">{current?.kana ?? '—'}</div>
+              <div className="mt-4 text-sm text-muted-foreground">当前反应计时：{formatMs(reactionMs)} ms</div>
+            </div>
+
+            <div className="space-y-3">
+              <label htmlFor="rec-input" className="text-sm font-medium text-muted-foreground">
+                罗马音
+              </label>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  id="rec-input"
+                  ref={inputRef}
+                  className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
+                  placeholder="例如：a / ka / shi"
+                  autoComplete="off"
+                  value={answer}
+                  onChange={(event) => setAnswer(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      submitAnswer()
+                    }
+                  }}
+                />
+                <Button onClick={submitAnswer}>确认</Button>
+                <Button variant="outline" onClick={skipQuestion}>
+                  跳过
+                </Button>
+              </div>
+              <div className={feedbackClassName} aria-live="polite" role="status">
+                {feedback.message || '输入后按 Enter 提交。'}
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="grid gap-3 rounded-[1.5rem] border bg-muted/20 p-4 sm:grid-cols-2">
+                <RecentStat label="累计已答" value={`${lifetimeStats.total}`} />
+                <RecentStat
+                  label="最近一组"
+                  value={lastSessionSummary ? `${lastSessionSummary.accuracy.toFixed(1)}% · ${Math.round(lastSessionSummary.averageMs)} ms` : '还没有完整摘要'}
+                />
               </div>
 
               <div className="space-y-4 rounded-[1.75rem] border bg-background p-4">
@@ -137,48 +169,10 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
                 </div>
               </div>
             </div>
-
-            <div className="grid gap-3 rounded-[1.5rem] border bg-muted/20 p-4 sm:grid-cols-2">
-              <RecentStat label="累计已答" value={`${lifetimeStats.total}`} />
-              <RecentStat
-                label="最近一组"
-                value={lastSessionSummary ? `${lastSessionSummary.accuracy.toFixed(1)}% · ${Math.round(lastSessionSummary.averageMs)} ms` : '还没有完整摘要'}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label htmlFor="rec-input" className="text-sm font-medium text-muted-foreground">
-                罗马音
-              </label>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <input
-                  id="rec-input"
-                  ref={inputRef}
-                  className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
-                  placeholder="例如：a / ka / shi"
-                  autoComplete="off"
-                  value={answer}
-                  onChange={(event) => setAnswer(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      submitAnswer()
-                    }
-                  }}
-                />
-                <Button onClick={submitAnswer}>确认</Button>
-                <Button variant="outline" onClick={skipQuestion}>
-                  跳过
-                </Button>
-              </div>
-              <div className={feedbackClassName} aria-live="polite" role="status">
-                {feedback.message || '输入后按 Enter 提交。'}
-              </div>
-            </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-2">
           <StatsBar
             title="当前组统计"
             description={statsLabel}

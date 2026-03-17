@@ -6,7 +6,6 @@ import { LogTable } from '@/components/training/LogTable'
 import { ScriptModeSwitch } from '@/components/training/ScriptModeSwitch'
 import { SessionSummaryDialog } from '@/components/training/SessionSummaryDialog'
 import { StatsBar } from '@/components/training/StatsBar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { DictationPreferences } from '@/hooks/useAppPreferences'
@@ -109,20 +108,22 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="mx-auto max-w-4xl space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle>② 乱序听写训练（音 → 形）</CardTitle>
-            <CardDescription>
-              播放单个假名，立刻写出对应假名，训练音到形的瞬时映射。
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
+          <CardHeader className="space-y-4">
+            <div>
+              <CardTitle>② 乱序听写训练（音 → 形）</CardTitle>
+              <CardDescription>
+                播放单个假名，立刻写出对应假名，训练音到形的瞬时映射。
+              </CardDescription>
+            </div>
+
             <div className="grid gap-4 lg:grid-cols-2">
               <KanaFilterBar activeSets={activeSets} onToggle={toggleKanaSet} />
               <ScriptModeSwitch value={scriptMode} onChange={setScriptMode} />
             </div>
-
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="rounded-2xl border p-4 text-sm leading-6 text-muted-foreground">
               <div className="flex items-start gap-2 font-medium text-foreground">
                 <AlertTriangle className="mt-0.5 h-4 w-4" />
@@ -133,61 +134,17 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
-              <div className="rounded-[1.75rem] border bg-muted/30 p-6 text-center sm:p-8">
-                <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">listen and write</div>
-                <div className="mt-4 flex justify-center">
-                  <Button size="lg" className="rounded-full px-8" onClick={playCurrentKana} disabled={isUnsupported}>
-                    <Volume2 className="h-5 w-5" />
-                    播放假名
-                  </Button>
-                </div>
-                <div className="mt-4 text-sm text-muted-foreground">当前反应计时：{formatMs(reactionMs)} ms</div>
-                <div className="mt-2 min-h-6 text-sm text-muted-foreground" aria-live="polite" role="status">
-                  {playbackFeedback || '进入新题时会自动播放；如果没听清，可以手动重播。'}
-                </div>
+            <div className="rounded-[1.75rem] border bg-muted/30 p-6 text-center sm:p-8">
+              <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">listen and write</div>
+              <div className="mt-4 flex justify-center">
+                <Button size="lg" className="rounded-full px-8" onClick={playCurrentKana} disabled={isUnsupported}>
+                  <Volume2 className="h-5 w-5" />
+                  播放假名
+                </Button>
               </div>
-
-              <div className="space-y-3 rounded-[1.75rem] border bg-background p-4">
-                <div className="space-y-2">
-                  <label htmlFor="dic-session-size" className="text-sm font-medium text-muted-foreground">
-                    本组题量
-                  </label>
-                  <input
-                    id="dic-session-size"
-                    className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
-                    type="number"
-                    min={10}
-                    max={500}
-                    step={10}
-                    value={sessionSize}
-                    onChange={(event) => setSessionSize(Number(event.target.value) || 30)}
-                  />
-                </div>
-                <div className="rounded-2xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
-                  <div className="flex items-center gap-2 font-medium text-foreground">
-                    <Keyboard className="h-4 w-4" />
-                    键盘操作
-                  </div>
-                  <ul className="mt-2 space-y-1">
-                    <li>Enter：提交答案</li>
-                    <li>播放后立刻输入，跳过也会计入统计</li>
-                    <li>如果语音不稳，建议先回 recognition</li>
-                  </ul>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-primary/10 text-primary">最近一组：{lastSessionSummary ? `${lastSessionSummary.total} 题` : '暂无'}</Badge>
-                  <Badge className="bg-background text-foreground">累计已答：{lifetimeStats.total}</Badge>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button className="flex-1" onClick={startSession}>
-                    开始新一组
-                  </Button>
-                  <Button variant="outline" onClick={goToNextQuestion}>
-                    <SkipForward className="h-4 w-4" />
-                    换一个
-                  </Button>
-                </div>
+              <div className="mt-4 text-sm text-muted-foreground">当前反应计时：{formatMs(reactionMs)} ms</div>
+              <div className="mt-2 min-h-6 text-sm text-muted-foreground" aria-live="polite" role="status">
+                {playbackFeedback || '进入新题时会自动播放；如果没听清，可以手动重播。'}
               </div>
             </div>
 
@@ -220,10 +177,60 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
                 {feedback.message || '先播放，再输入。'}
               </div>
             </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="grid gap-3 rounded-[1.5rem] border bg-muted/20 p-4 sm:grid-cols-2">
+                <RecentStat label="累计已答" value={`${lifetimeStats.total}`} />
+                <RecentStat
+                  label="最近一组"
+                  value={lastSessionSummary ? `${lastSessionSummary.accuracy.toFixed(1)}% · ${Math.round(lastSessionSummary.averageMs)} ms` : '还没有完整摘要'}
+                />
+              </div>
+
+              <div className="space-y-4 rounded-[1.75rem] border bg-background p-4">
+                <div className="space-y-2">
+                  <label htmlFor="dic-session-size" className="text-sm font-medium text-muted-foreground">
+                    本组题量
+                  </label>
+                  <input
+                    id="dic-session-size"
+                    className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
+                    type="number"
+                    min={10}
+                    max={500}
+                    step={10}
+                    value={sessionSize}
+                    onChange={(event) => setSessionSize(Number(event.target.value) || 30)}
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
+                  <div className="flex items-center gap-2 font-medium text-foreground">
+                    <Keyboard className="h-4 w-4" />
+                    键盘操作
+                  </div>
+                  <ul className="mt-2 space-y-1">
+                    <li>Enter：提交答案</li>
+                    <li>播放后立刻输入，跳过也会计入统计</li>
+                    <li>如果语音不稳，建议先回 recognition</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button className="flex-1" onClick={startSession}>
+                    开始新一组
+                  </Button>
+                  <Button variant="outline" onClick={goToNextQuestion}>
+                    <SkipForward className="h-4 w-4" />
+                    换一个
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-2">
           <StatsBar
             title="当前组统计"
             description={statsLabel}
@@ -271,6 +278,15 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
       </Card>
 
       <SessionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} summary={summary} />
+    </div>
+  )
+}
+
+function RecentStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border bg-background p-4">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm font-semibold">{value}</div>
     </div>
   )
 }
