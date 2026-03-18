@@ -58,7 +58,7 @@ export function SessionSummaryDialog({ open, onOpenChange, summary, history = []
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             <div className="rounded-2xl border bg-muted/25 p-4">
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
@@ -70,7 +70,7 @@ export function SessionSummaryDialog({ open, onOpenChange, summary, history = []
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <SummaryItem label="总题数" value={`${selectedReview.total} 题`} />
               <SummaryItem label="正确 / 错误" value={`${selectedReview.correct} / ${selectedReview.wrong}`} />
               <SummaryItem label="准确率" value={formatPercent(selectedReview.accuracy)} />
@@ -107,7 +107,7 @@ export function SessionSummaryDialog({ open, onOpenChange, summary, history = []
                 <Badge className="bg-secondary text-secondary-foreground">{selectedReview.breakdown.length} 项</Badge>
               </div>
               <ScrollArea className="h-[320px]">
-                <div className="space-y-3 p-4">
+                <div className="space-y-3 p-4 pr-5">
                   {selectedReview.breakdown.length ? (
                     selectedReview.breakdown.map((item) => (
                       <div key={`${selectedReview.id}-${item.kana}`} className="rounded-2xl border bg-background/70 p-4">
