@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, Keyboard } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Info, Keyboard } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 
+import { TRAINING_HINT_COPY } from '@/content/siteCopy'
 import { KanaFilterBar } from '@/components/training/KanaFilterBar'
 import { LogTable } from '@/components/training/LogTable'
 import { ScriptModeSwitch } from '@/components/training/ScriptModeSwitch'
@@ -67,6 +68,8 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
     [feedback.tone],
   )
 
+  const isDakuonActive = activeSets.includes('dakuon')
+
   return (
     <div className="space-y-6">
       <section className="space-y-4">
@@ -86,6 +89,15 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
           <KanaFilterBar activeSets={activeSets} onToggle={toggleKanaSet} />
           <ScriptModeSwitch value={scriptMode} onChange={setScriptMode} />
         </div>
+
+        {isDakuonActive ? (
+          <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-900 dark:text-sky-100">
+            <div className="flex items-start gap-2 font-medium">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{TRAINING_HINT_COPY.recognition}</p>
+            </div>
+          </div>
+        ) : null}
 
         <div className="rounded-[1.75rem] border bg-muted/30 p-6 text-center sm:p-8">
           <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">current kana</div>

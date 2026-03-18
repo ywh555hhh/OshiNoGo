@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { AppFootnote } from '@/components/layout/AppFootnote'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { OnboardingDialog } from '@/components/layout/OnboardingDialog'
 import { AppShell } from '@/components/layout/AppShell'
@@ -23,7 +24,7 @@ function App() {
     updateRecognition,
     updateWords,
   } = useAppPreferences()
-  const { label, toggleTheme } = useTheme(preferences.theme, setThemePreference)
+  const { label, resolvedTheme, toggleTheme } = useTheme(preferences.theme, setThemePreference)
   const [onboardingOpen, setOnboardingOpen] = useState(!preferences.onboardingCompleted)
 
   return (
@@ -32,6 +33,7 @@ function App() {
         header={
           <AppHeader
             themeLabel={label}
+            isDarkTheme={resolvedTheme === 'dark'}
             onOpenHelp={() => setOnboardingOpen(true)}
             onToggleTheme={toggleTheme}
           />
@@ -62,6 +64,8 @@ function App() {
               storageWarning={isPersistenceDegraded ? persistenceWarning : null}
               onModeChange={setLastMode}
             />
+
+            <AppFootnote />
           </div>
         }
       />
