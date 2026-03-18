@@ -42,6 +42,12 @@ export interface KanaPerformance {
   averageMs: number
 }
 
+export interface SessionKanaReview extends KanaPerformance {
+  wrong: number
+  bestMs: number | null
+  worstMs: number | null
+}
+
 export interface RecognitionSummary {
   total: number
   correct: number
@@ -50,13 +56,19 @@ export interface RecognitionSummary {
   averageMs: number
   bestMs: number | null
   worstMs: number | null
-  weakest: KanaPerformance[]
-  slowest: KanaPerformance[]
+  weakest: SessionKanaReview[]
+  slowest: SessionKanaReview[]
 }
 
 export interface StoredSessionSummary extends RecognitionSummary {
   completedAt: number
   sessionSize: number
+}
+
+export interface StoredSessionReview extends StoredSessionSummary {
+  id: string
+  logs: RecognitionLogEntry[]
+  breakdown: SessionKanaReview[]
 }
 
 export interface LifetimeStats {

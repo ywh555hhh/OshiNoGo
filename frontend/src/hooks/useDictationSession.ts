@@ -2,11 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { KANA } from '@/data/kana'
 import { getActiveKanaPool, toggleKanaSetSelection } from '@/domain/kana'
-import { buildRecognitionSummary, createAggregateStats, hasMetMasteryTarget } from '@/domain/stats'
+import { buildRecognitionSummary, buildSessionBreakdown, createAggregateStats, hasMetMasteryTarget } from '@/domain/stats'
 import type { DictationPreferences } from '@/hooks/useAppPreferences'
-import { mergeLifetimeStats } from '@/hooks/useAppPreferences'
+import { appendSessionReview, mergeLifetimeStats } from '@/hooks/useAppPreferences'
 import { clamp, formatMs, now } from '@/lib/utils'
-import type { FeedbackState, KanaItem, KanaSet, RecognitionLogEntry, ScriptMode, StoredSessionSummary } from '@/types/training'
+import type {
+  FeedbackState,
+  KanaItem,
+  KanaSet,
+  RecognitionLogEntry,
+  ScriptMode,
+  StoredSessionReview,
+} from '@/types/training'
 
 const DEFAULT_SESSION_SIZE = 30
 const LOG_PAGE_SIZE = 30
@@ -81,6 +88,17 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
       ),
     [preferences.lifetimeStats],
   )
+  const currentReview = useMemo<StoredSessionReview>(
+    () => ({
+      id: 'dictation-current',
+      ...summary,
+      completedAt: logs[0]?.timestamp ?? preferences.lastSessionSummary?.completedAt ?? 0,
+      sessionSize,
+      logs: logs.slice(0, 500),
+      breakdown: buildSessionBreakdown(logs),
+    }),
+    [logs, preferences.lastSessionSummary?.completedAt, sessionSize, summary],
+  )
 
   useEffect(() => {
     currentRef.current = current
@@ -101,10 +119,14 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
     }
 
     persistedSessionIdRef.current = sessionIdRef.current
-    const completedSummary: StoredSessionSummary = {
+    const completedAt = Date.now()
+    const completedReview: StoredSessionReview = {
+      id: `dictation-${completedAt}-${sessionIdRef.current}`,
       ...summary,
-      completedAt: Date.now(),
+      completedAt,
       sessionSize,
+      logs: logs.slice(0, 500),
+      breakdown: buildSessionBreakdown(logs),
     }
 
     onPreferencesChange((currentPreference) => ({
@@ -114,9 +136,10 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
         correct: stats.correct,
         times,
       }),
-      lastSessionSummary: completedSummary,
+      lastSessionSummary: completedReview,
+      sessionReviews: appendSessionReview(currentPreference.sessionReviews, completedReview),
     }))
-  }, [onPreferencesChange, sessionSize, stats, summary, times, total])
+  }, [logs, onPreferencesChange, sessionSize, stats, summary, times, total])
 
   useEffect(() => {
     return () => {
@@ -126,31 +149,34 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
     }
   }, [])
 
-  const nextQuestion = useCallback((restartSession = false) => {
-    if (advanceTimerRef.current) {
-      window.clearTimeout(advanceTimerRef.current)
-    }
+  const nextQuestion = useCallback(
+    (restartSession = false) => {
+      if (advanceTimerRef.current) {
+        window.clearTimeout(advanceTimerRef.current)
+      }
 
-    if (restartSession) {
-      sessionIdRef.current += 1
-      persistedSessionIdRef.current = null
-      setTotal(0)
-      setCorrect(0)
-      setTimes([])
-      setLogs([])
-      setLogPageState(1)
-      setSummaryDismissed(false)
+      if (restartSession) {
+        sessionIdRef.current += 1
+        persistedSessionIdRef.current = null
+        setTotal(0)
+        setCorrect(0)
+        setTimes([])
+        setLogs([])
+        setLogPageState(1)
+        setSummaryDismissed(false)
+        setReactionMs(0)
+        setFeedback({ tone: 'info', message: '新一组已开始，先播放再作答。' })
+      }
+
+      const next = randomPick(pool, currentRef.current)
+      currentRef.current = next
+      setCurrent(next)
+      setAnswer('')
       setReactionMs(0)
-      setFeedback({ tone: 'info', message: '新一组已开始，先播放再作答。' })
-    }
-
-    const next = randomPick(pool, currentRef.current)
-    currentRef.current = next
-    setCurrent(next)
-    setAnswer('')
-    setReactionMs(0)
-    startTimeRef.current = now()
-  }, [pool])
+      startTimeRef.current = now()
+    },
+    [pool],
+  )
 
   const playPrompt = useCallback(() => {
     if (!currentRef.current) {
@@ -210,41 +236,53 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
     nextQuestion(false)
   }, [nextQuestion, registerLog])
 
-  const toggleKanaSet = useCallback((target: KanaSet) => {
-    setActiveSets((currentSets) => {
-      const nextSets = toggleKanaSetSelection(currentSets, target)
-      const nextPool = buildPool(nextSets, scriptMode)
+  const toggleKanaSet = useCallback(
+    (target: KanaSet) => {
+      setActiveSets((currentSets) => {
+        const nextSets = toggleKanaSetSelection(currentSets, target)
+        const nextPool = buildPool(nextSets, scriptMode)
+        const nextCurrent = randomPick(nextPool)
+        currentRef.current = nextCurrent
+        setCurrent(nextCurrent)
+        setAnswer('')
+        setReactionMs(0)
+        return nextSets
+      })
+    },
+    [scriptMode],
+  )
+
+  const setScriptMode = useCallback(
+    (mode: ScriptMode) => {
+      setScriptModeState(mode)
+      const nextPool = buildPool(activeSets, mode)
       const nextCurrent = randomPick(nextPool)
       currentRef.current = nextCurrent
       setCurrent(nextCurrent)
       setAnswer('')
       setReactionMs(0)
-      return nextSets
-    })
-  }, [scriptMode])
-
-  const setScriptMode = useCallback((mode: ScriptMode) => {
-    setScriptModeState(mode)
-    const nextPool = buildPool(activeSets, mode)
-    const nextCurrent = randomPick(nextPool)
-    currentRef.current = nextCurrent
-    setCurrent(nextCurrent)
-    setAnswer('')
-    setReactionMs(0)
-  }, [activeSets])
+    },
+    [activeSets],
+  )
 
   const setSessionSize = useCallback((value: number) => {
     setSessionSizeState(clamp(Number.isFinite(value) ? Math.round(value) : DEFAULT_SESSION_SIZE, 10, 500))
   }, [])
 
-  const startNewSession = useCallback((requestedSize = sessionSize) => {
-    setSessionSizeState(clamp(Number.isFinite(requestedSize) ? Math.round(requestedSize) : DEFAULT_SESSION_SIZE, 10, 500))
-    nextQuestion(true)
-  }, [nextQuestion, sessionSize])
+  const startNewSession = useCallback(
+    (requestedSize = sessionSize) => {
+      setSessionSizeState(clamp(Number.isFinite(requestedSize) ? Math.round(requestedSize) : DEFAULT_SESSION_SIZE, 10, 500))
+      nextQuestion(true)
+    },
+    [nextQuestion, sessionSize],
+  )
 
-  const setLogPage = useCallback((value: number) => {
-    setLogPageState(Math.max(1, Math.min(value, totalPages)))
-  }, [totalPages])
+  const setLogPage = useCallback(
+    (value: number) => {
+      setLogPageState(Math.max(1, Math.min(value, totalPages)))
+    },
+    [totalPages],
+  )
 
   const setSummaryOpen = useCallback((open: boolean) => {
     setSummaryDismissed(!open)
@@ -262,6 +300,7 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
     activeSets,
     answer,
     current,
+    currentReview,
     feedback,
     lastSessionSummary: preferences.lastSessionSummary,
     lifetimeStats,
@@ -271,6 +310,7 @@ export function useDictationSession({ preferences, onPreferencesChange }: UseDic
     progress,
     reactionMs,
     scriptMode,
+    sessionReviews: preferences.sessionReviews,
     sessionSize,
     stats,
     statsLabel,

@@ -24,6 +24,7 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
     activeSets,
     answer,
     current,
+    currentReview,
     feedback,
     lastSessionSummary,
     lifetimeStats,
@@ -33,10 +34,10 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
     progress,
     reactionMs,
     scriptMode,
+    sessionReviews,
     sessionSize,
     stats,
     statsLabel,
-    summary,
     summaryOpen,
     totalPages,
     masteryReached,
@@ -254,7 +255,7 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>本组答题日志</CardTitle>
-            <CardDescription>听写结果、输入内容和反应时间都会记录在这里。</CardDescription>
+            <CardDescription>听写结果、输入内容和反应时间都会记录在这里；一页 30 条，完成后报告会保留在回顾里。</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={goToPreviousLogPage} disabled={logPage <= 1}>
@@ -272,7 +273,7 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
         </CardContent>
       </Card>
 
-      <SessionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} summary={summary} />
+      <SessionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} summary={currentReview} history={sessionReviews} />
     </div>
   )
 }

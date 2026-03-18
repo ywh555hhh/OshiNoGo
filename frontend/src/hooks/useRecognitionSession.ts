@@ -3,12 +3,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { KANA } from '@/data/kana'
 import { getActiveKanaPool, normalizeRomaji, toggleKanaSetSelection } from '@/domain/kana'
 import { buildRecSessionQueue } from '@/domain/queue'
-import { buildRecognitionSummary, createAggregateStats, hasMetMasteryTarget } from '@/domain/stats'
+import { buildRecognitionSummary, buildSessionBreakdown, createAggregateStats, hasMetMasteryTarget } from '@/domain/stats'
 import type { RecognitionPreferences } from '@/hooks/useAppPreferences'
-import { mergeLifetimeStats } from '@/hooks/useAppPreferences'
+import { appendSessionReview, mergeLifetimeStats } from '@/hooks/useAppPreferences'
 import { playResultSound } from '@/lib/audio'
 import { clamp, formatMs, now } from '@/lib/utils'
-import type { FeedbackState, KanaItem, KanaSet, RecognitionLogEntry, ScriptMode, StoredSessionSummary } from '@/types/training'
+import type {
+  FeedbackState,
+  KanaItem,
+  KanaSet,
+  RecognitionLogEntry,
+  ScriptMode,
+  StoredSessionReview,
+} from '@/types/training'
 
 const DEFAULT_SESSION_SIZE = 50
 const LOG_PAGE_SIZE = 50
@@ -88,6 +95,17 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
       ),
     [preferences.lifetimeStats],
   )
+  const currentReview = useMemo<StoredSessionReview>(
+    () => ({
+      id: 'recognition-current',
+      ...summary,
+      completedAt: state.logs[0]?.timestamp ?? preferences.lastSessionSummary?.completedAt ?? 0,
+      sessionSize: state.sessionSize,
+      logs: state.logs.slice(0, 500),
+      breakdown: buildSessionBreakdown(state.logs),
+    }),
+    [preferences.lastSessionSummary?.completedAt, state.logs, state.sessionSize, summary],
+  )
 
   useEffect(() => {
     onPreferencesChange((current) => ({
@@ -104,10 +122,14 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     }
 
     persistedSessionIdRef.current = sessionIdRef.current
-    const completedSummary: StoredSessionSummary = {
+    const completedAt = Date.now()
+    const completedReview: StoredSessionReview = {
+      id: `recognition-${completedAt}-${sessionIdRef.current}`,
       ...summary,
-      completedAt: Date.now(),
+      completedAt,
       sessionSize: state.sessionSize,
+      logs: state.logs.slice(0, 500),
+      breakdown: buildSessionBreakdown(state.logs),
     }
 
     onPreferencesChange((current) => ({
@@ -117,9 +139,10 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
         correct: aggregateStats.correct,
         times: state.times,
       }),
-      lastSessionSummary: completedSummary,
+      lastSessionSummary: completedReview,
+      sessionReviews: appendSessionReview(current.sessionReviews, completedReview),
     }))
-  }, [aggregateStats, onPreferencesChange, state.answeredCount, state.sessionSize, state.times, summary])
+  }, [aggregateStats, onPreferencesChange, state.answeredCount, state.logs, state.sessionSize, state.times, summary])
 
   useEffect(() => {
     return () => {
@@ -129,13 +152,16 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     }
   }, [])
 
-  const replaceSession = useCallback((nextPool: KanaItem[], requestedSize = state.sessionSize) => {
-    sessionIdRef.current += 1
-    persistedSessionIdRef.current = null
-    const nextState = createSessionState(nextPool, requestedSize)
-    setState(nextState)
-    startTimeRef.current = now()
-  }, [state.sessionSize])
+  const replaceSession = useCallback(
+    (nextPool: KanaItem[], requestedSize = state.sessionSize) => {
+      sessionIdRef.current += 1
+      persistedSessionIdRef.current = null
+      const nextState = createSessionState(nextPool, requestedSize)
+      setState(nextState)
+      startTimeRef.current = now()
+    },
+    [state.sessionSize],
+  )
 
   const scheduleAdvance = useCallback(
     (delay = 360) => {
@@ -265,9 +291,12 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     setState((currentState) => ({ ...currentState, answer: value }))
   }, [])
 
-  const setLogPage = useCallback((value: number) => {
-    setState((currentState) => ({ ...currentState, logPage: Math.max(1, Math.min(value, totalPages)) }))
-  }, [totalPages])
+  const setLogPage = useCallback(
+    (value: number) => {
+      setState((currentState) => ({ ...currentState, logPage: Math.max(1, Math.min(value, totalPages)) }))
+    },
+    [totalPages],
+  )
 
   const setSummaryOpen = useCallback((open: boolean) => {
     setState((currentState) => ({ ...currentState, summaryDismissed: !open }))
@@ -292,6 +321,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     activeSets,
     answer: state.answer,
     current: state.current,
+    currentReview,
     feedback: state.feedback,
     lastSessionSummary: preferences.lastSessionSummary,
     lifetimeStats,
@@ -302,6 +332,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     reactionMs: state.reactionMs,
     scriptMode,
     sessionIndex: state.sessionIndex,
+    sessionReviews: preferences.sessionReviews,
     sessionSize: state.sessionSize,
     stats: aggregateStats,
     statsLabel,
