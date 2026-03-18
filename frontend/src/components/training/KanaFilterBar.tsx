@@ -1,7 +1,6 @@
 import { KANA_SET_LABELS } from '@/data/kana'
 import { Button } from '@/components/ui/button'
 import type { KanaSet } from '@/types/training'
-import { cn } from '@/lib/utils'
 
 interface KanaFilterBarProps {
   activeSets: KanaSet[]
@@ -24,7 +23,7 @@ export function KanaFilterBar({ activeSets, onToggle }: KanaFilterBarProps) {
               variant={active ? 'default' : 'outline'}
               size="sm"
               onClick={() => onToggle(set)}
-              className={cn('rounded-full', active && 'shadow-sm')}
+              className="rounded-full"
             >
               {KANA_SET_LABELS[set]}
             </Button>

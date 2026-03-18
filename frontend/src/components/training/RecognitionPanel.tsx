@@ -19,6 +19,8 @@ interface RecognitionPanelProps {
   onPreferencesChange: (next: RecognitionPreferences | ((current: RecognitionPreferences) => RecognitionPreferences)) => void
 }
 
+const SESSION_SIZE_OPTIONS = [10, 20, 30, 50, 100, 200, 300, 500] as const
+
 export function RecognitionPanel({ preferences, onPreferencesChange }: RecognitionPanelProps) {
   const {
     activeSets,
@@ -69,6 +71,13 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
   )
 
   const isDakuonActive = activeSets.includes('dakuon')
+  const sessionSizeOptions = useMemo(
+    () =>
+      SESSION_SIZE_OPTIONS.includes(sessionSize as (typeof SESSION_SIZE_OPTIONS)[number])
+        ? SESSION_SIZE_OPTIONS
+        : [...SESSION_SIZE_OPTIONS, sessionSize].sort((left, right) => left - right),
+    [sessionSize],
+  )
 
   return (
     <div className="space-y-6">
@@ -149,16 +158,18 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
               <label htmlFor="rec-session-size" className="text-sm font-medium text-muted-foreground">
                 本组题量
               </label>
-              <input
+              <select
                 id="rec-session-size"
                 className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
-                type="number"
-                min={10}
-                max={500}
-                step={10}
                 value={sessionSize}
-                onChange={(event) => setSessionSize(Number(event.target.value) || 50)}
-              />
+                onChange={(event) => setSessionSize(Number(event.target.value))}
+              >
+                {sessionSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size} 题
+                  </option>
+                ))}
+              </select>
             </div>
 
             <Button className="w-full" onClick={() => startNewSession(sessionSize)}>
