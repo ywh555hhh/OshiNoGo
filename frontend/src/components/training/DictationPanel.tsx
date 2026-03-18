@@ -20,8 +20,6 @@ interface DictationPanelProps {
   onPreferencesChange: (next: DictationPreferences | ((current: DictationPreferences) => DictationPreferences)) => void
 }
 
-const SESSION_SIZE_OPTIONS = [10, 20, 30, 50, 100, 200, 300, 500] as const
-
 export function DictationPanel({ preferences, onPreferencesChange }: DictationPanelProps) {
   const {
     activeSets,
@@ -58,6 +56,12 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
   const { capability, isUnsupported } = useSpeechCapability()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [playbackFeedback, setPlaybackFeedback] = useState('')
+  const [sessionSizeInput, setSessionSizeInput] = useState(String(sessionSize))
+
+  useEffect(() => {
+    // 当底层 sessionSize 变化时同步到 UI
+    setSessionSizeInput(String(sessionSize))
+  }, [sessionSize])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -111,14 +115,6 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
   }
 
   const isDakuonActive = activeSets.includes('dakuon')
-  const sessionSizeOptions = useMemo(
-    () =>
-      SESSION_SIZE_OPTIONS.includes(sessionSize as (typeof SESSION_SIZE_OPTIONS)[number])
-        ? SESSION_SIZE_OPTIONS
-        : [...SESSION_SIZE_OPTIONS, sessionSize].sort((left, right) => left - right),
-    [sessionSize],
-  )
-
   return (
     <div className="space-y-6">
       <section className="space-y-4">
@@ -211,18 +207,34 @@ export function DictationPanel({ preferences, onPreferencesChange }: DictationPa
               <label htmlFor="dic-session-size" className="text-sm font-medium text-muted-foreground">
                 本组题量
               </label>
-              <select
+              <input
                 id="dic-session-size"
+                type="number"
                 className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
-                value={sessionSize}
-                onChange={(event) => setSessionSize(Number(event.target.value))}
-              >
-                {sessionSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size} 题
-                  </option>
-                ))}
-              </select>
+                min={10}
+                max={500}
+                inputMode="numeric"
+                value={sessionSizeInput}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setSessionSizeInput(value)
+
+                  const parsed = Number(value)
+                  if (Number.isInteger(parsed) && parsed >= 10 && parsed <= 500) {
+                    setSessionSize(parsed)
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = Number(sessionSizeInput)
+                  if (!Number.isFinite(parsed)) {
+                    setSessionSizeInput(String(sessionSize))
+                    return
+                  }
+
+                  const clamped = Math.min(500, Math.max(10, Math.round(parsed)))
+                  setSessionSize(clamped)
+                }}
+              />
             </div>
 
             <div className="rounded-2xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">

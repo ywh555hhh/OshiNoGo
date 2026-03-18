@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Info, Keyboard } from 'lucide-react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { TRAINING_HINT_COPY } from '@/content/siteCopy'
 import { KanaFilterBar } from '@/components/training/KanaFilterBar'
@@ -18,8 +18,6 @@ interface RecognitionPanelProps {
   preferences: RecognitionPreferences
   onPreferencesChange: (next: RecognitionPreferences | ((current: RecognitionPreferences) => RecognitionPreferences)) => void
 }
-
-const SESSION_SIZE_OPTIONS = [10, 20, 30, 50, 100, 200, 300, 500] as const
 
 export function RecognitionPanel({ preferences, onPreferencesChange }: RecognitionPanelProps) {
   const {
@@ -54,6 +52,13 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
     toggleKanaSet,
   } = useRecognitionSession({ preferences, onPreferencesChange })
 
+  const [sessionSizeInput, setSessionSizeInput] = useState(String(sessionSize))
+
+  useEffect(() => {
+    // 当 sessionSize 从外部（例如偏好恢复）变化时，同步到输入框
+    setSessionSizeInput(String(sessionSize))
+  }, [sessionSize])
+
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -71,13 +76,6 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
   )
 
   const isDakuonActive = activeSets.includes('dakuon')
-  const sessionSizeOptions = useMemo(
-    () =>
-      SESSION_SIZE_OPTIONS.includes(sessionSize as (typeof SESSION_SIZE_OPTIONS)[number])
-        ? SESSION_SIZE_OPTIONS
-        : [...SESSION_SIZE_OPTIONS, sessionSize].sort((left, right) => left - right),
-    [sessionSize],
-  )
 
   return (
     <div className="space-y-6">
@@ -158,18 +156,37 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
               <label htmlFor="rec-session-size" className="text-sm font-medium text-muted-foreground">
                 本组题量
               </label>
-              <select
+              <input
                 id="rec-session-size"
+                type="number"
                 className="flex h-10 w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
-                value={sessionSize}
-                onChange={(event) => setSessionSize(Number(event.target.value))}
-              >
-                {sessionSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size} 题
-                  </option>
-                ))}
-              </select>
+                min={10}
+                max={500}
+                inputMode="numeric"
+                value={sessionSizeInput}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setSessionSizeInput(value)
+
+                  const parsed = Number(value)
+                  if (Number.isInteger(parsed) && parsed >= 10 && parsed <= 500) {
+                    // 只有在输入为 10–500 的整数时，才同步到底层 sessionSize
+                    setSessionSize(parsed)
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = Number(sessionSizeInput)
+                  if (!Number.isFinite(parsed)) {
+                    // 空值或非数字：回退到当前 sessionSize
+                    setSessionSizeInput(String(sessionSize))
+                    return
+                  }
+
+                  // UI 层面先做一次四舍五入 + clamp，底层 Hook 仍会再做一次安全检查
+                  const clamped = Math.min(500, Math.max(10, Math.round(parsed)))
+                  setSessionSize(clamped)
+                }}
+              />
             </div>
 
             <Button className="w-full" onClick={() => startNewSession(sessionSize)}>
