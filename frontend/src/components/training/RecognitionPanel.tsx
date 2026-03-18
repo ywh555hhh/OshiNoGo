@@ -196,7 +196,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>本组答题日志</CardTitle>
-            <CardDescription>记录本组所有题目的对错、输入和反应时间；一页 50 条，完成后报告会保留在回顾里。</CardDescription>
+            <CardDescription>记录本组所有题目的对错、输入和反应时间；一页 50 条，卡片内可以直接上下滑动查看。</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setLogPage(Math.max(1, logPage - 1))} disabled={logPage <= 1}>

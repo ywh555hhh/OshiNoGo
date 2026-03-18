@@ -16,7 +16,7 @@ import type {
 } from '@/types/training'
 
 const DEFAULT_SESSION_SIZE = 30
-const LOG_PAGE_SIZE = 30
+const LOG_PAGE_SIZE = 50
 
 function buildPool(activeSets: KanaSet[], scriptMode: ScriptMode) {
   return getActiveKanaPool(KANA, activeSets, scriptMode)
