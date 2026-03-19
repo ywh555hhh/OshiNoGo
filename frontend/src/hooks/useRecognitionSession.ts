@@ -54,6 +54,7 @@ function createSessionState(pool: KanaItem[], requestedSize = DEFAULT_SESSION_SI
     reactionMs: 0,
     logPage: 1,
     reportSource: null as ReportSource,
+    isTransitioning: false,
   }
 }
 
@@ -71,6 +72,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
   const advanceTimerRef = useRef<number | null>(null)
   const sessionIdRef = useRef(1)
   const persistedSessionIdRef = useRef<number | null>(null)
+  const transitionLockRef = useRef(false)
   const currentQuestion = state.current
   const currentAnswer = state.answer
 
@@ -160,6 +162,11 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
 
   const replaceSession = useCallback(
     (nextPool: KanaItem[], requestedSize = state.sessionSize) => {
+      if (advanceTimerRef.current) {
+        window.clearTimeout(advanceTimerRef.current)
+        advanceTimerRef.current = null
+      }
+      transitionLockRef.current = false
       sessionIdRef.current += 1
       persistedSessionIdRef.current = null
       const nextState = createSessionState(nextPool, requestedSize)
@@ -188,8 +195,11 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
             answer: '',
             reactionMs: 0,
             feedback: { tone: 'idle', message: '' },
+            isTransitioning: false,
           }
         })
+        advanceTimerRef.current = null
+        transitionLockRef.current = false
         startTimeRef.current = now()
       }, delay)
     },
@@ -222,12 +232,13 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
             : currentState.times,
         reactionMs: typeof measuredMs === 'number' ? measuredMs : 0,
         logs: nextLogs,
+        isTransitioning: true,
       }
     })
   }, [])
 
   const submitAnswer = useCallback(() => {
-    if (!currentQuestion) {
+    if (!currentQuestion || state.isTransitioning || transitionLockRef.current) {
       return
     }
 
@@ -238,6 +249,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
       return
     }
 
+    transitionLockRef.current = true
     const measuredMs = startTimeRef.current ? now() - startTimeRef.current : 0
     const ok = normalized === currentRomaji
     registerAnswer(ok, normalized, measuredMs)
@@ -252,9 +264,14 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     }))
     playResultSound(ok)
     scheduleAdvance()
-  }, [currentAnswer, currentQuestion, registerAnswer, scheduleAdvance])
+  }, [currentAnswer, currentQuestion, registerAnswer, scheduleAdvance, state.isTransitioning])
 
   const skipQuestion = useCallback(() => {
+    if (state.isTransitioning || transitionLockRef.current) {
+      return
+    }
+
+    transitionLockRef.current = true
     registerAnswer(false, '(skip)', null)
     setState((currentState) => ({
       ...currentState,
@@ -265,7 +282,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     }))
     playResultSound(false)
     scheduleAdvance(120)
-  }, [registerAnswer, scheduleAdvance])
+  }, [registerAnswer, scheduleAdvance, state.isTransitioning])
 
   const toggleKanaSet = useCallback(
     (target: KanaSet) => {

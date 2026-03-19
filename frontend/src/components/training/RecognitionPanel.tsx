@@ -184,6 +184,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
 
                   const clamped = Math.min(500, Math.max(10, Math.round(parsed)))
                   setSessionSize(clamped)
+                  setSessionSizeInput(String(clamped))
                 }}
               />
             </div>
