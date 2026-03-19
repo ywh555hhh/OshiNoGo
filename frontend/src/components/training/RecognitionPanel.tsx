@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Info, Keyboard } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FileText, Info, Keyboard } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { TRAINING_HINT_COPY } from '@/content/siteCopy'
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { RecognitionPreferences } from '@/hooks/useAppPreferences'
 import { useRecognitionSession } from '@/hooks/useRecognitionSession'
-import { cn, formatMs } from '@/lib/utils'
+import { cn, formatDateTime, formatMs, formatPercent } from '@/lib/utils'
 
 interface RecognitionPanelProps {
   preferences: RecognitionPreferences
@@ -24,28 +24,31 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
     activeSets,
     answer,
     current,
-    currentReview,
     feedback,
+    hasSessionReports,
     lastSessionSummary,
+    latestSessionReview,
     lifetimeStats,
     logPage,
+    openLatestReport,
     pagedLogs,
     progress,
     reactionMs,
+    reportOpen,
+    reportSummary,
     scriptMode,
     sessionIndex,
     sessionReviews,
     sessionSize,
     stats,
     statsLabel,
-    summaryOpen,
     totalPages,
     masteryReached,
+    closeReport,
     setAnswer,
     setLogPage,
     setScriptMode,
     setSessionSize,
-    setSummaryOpen,
     startNewSession,
     submitAnswer,
     skipQuestion,
@@ -55,7 +58,6 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
   const [sessionSizeInput, setSessionSizeInput] = useState(String(sessionSize))
 
   useEffect(() => {
-    // 当 sessionSize 从外部（例如偏好恢复）变化时，同步到输入框
     setSessionSizeInput(String(sessionSize))
   }, [sessionSize])
 
@@ -170,19 +172,16 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
 
                   const parsed = Number(value)
                   if (Number.isInteger(parsed) && parsed >= 10 && parsed <= 500) {
-                    // 只有在输入为 10–500 的整数时，才同步到底层 sessionSize
                     setSessionSize(parsed)
                   }
                 }}
                 onBlur={() => {
                   const parsed = Number(sessionSizeInput)
                   if (!Number.isFinite(parsed)) {
-                    // 空值或非数字：回退到当前 sessionSize
                     setSessionSizeInput(String(sessionSize))
                     return
                   }
 
-                  // UI 层面先做一次四舍五入 + clamp，底层 Hook 仍会再做一次安全检查
                   const clamped = Math.min(500, Math.max(10, Math.round(parsed)))
                   setSessionSize(clamped)
                 }}
@@ -192,6 +191,41 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
             <Button className="w-full" onClick={() => startNewSession(sessionSize)}>
               开始新一组
             </Button>
+
+            <div className="rounded-2xl border bg-muted/20 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <FileText className="h-4 w-4" />
+                训练报告
+              </div>
+
+              {hasSessionReports && latestSessionReview ? (
+                <div className="mt-3 space-y-3 text-sm">
+                  <div className="rounded-2xl border bg-background p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs text-muted-foreground">最近完成</div>
+                      <Badge className="bg-secondary text-secondary-foreground">{latestSessionReview.sessionSize} 题</Badge>
+                    </div>
+                    <div className="mt-2 font-medium text-foreground">
+                      {formatPercent(latestSessionReview.accuracy)} · 平均 {formatMs(latestSessionReview.averageMs)} ms
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      正确 / 错误：{latestSessionReview.correct} / {latestSessionReview.wrong}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">完成时间：{formatDateTime(latestSessionReview.completedAt)}</div>
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={openLatestReport}>
+                    查看训练报告
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm leading-6 text-muted-foreground">完成一整组后可查看最近记录，入口会一直留在这里，方便随时回看。</p>
+                  <Button variant="outline" className="w-full" disabled>
+                    查看训练报告
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <div className="rounded-2xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
               <div className="flex items-center gap-2 font-medium text-foreground">
@@ -254,7 +288,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
         </CardContent>
       </Card>
 
-      <SessionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} summary={currentReview} history={sessionReviews} />
+      <SessionSummaryDialog open={reportOpen} onOpenChange={(open) => (!open ? closeReport() : undefined)} summary={reportSummary} history={sessionReviews} />
     </div>
   )
 }

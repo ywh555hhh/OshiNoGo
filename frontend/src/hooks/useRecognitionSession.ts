@@ -20,6 +20,8 @@ import type {
 const DEFAULT_SESSION_SIZE = 50
 const LOG_PAGE_SIZE = 50
 
+type ReportSource = 'auto-current' | 'history-latest' | null
+
 function buildInitialFeedback(): FeedbackState {
   return { tone: 'info', message: '开始新一组，进入瞬时反应状态。' }
 }
@@ -51,7 +53,7 @@ function createSessionState(pool: KanaItem[], requestedSize = DEFAULT_SESSION_SI
     times: [] as number[],
     reactionMs: 0,
     logPage: 1,
-    summaryDismissed: false,
+    reportSource: null as ReportSource,
   }
 }
 
@@ -85,7 +87,6 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     const start = (safeLogPage - 1) * LOG_PAGE_SIZE
     return state.logs.slice(start, start + LOG_PAGE_SIZE)
   }, [safeLogPage, state.logs])
-  const summaryOpen = state.logs.length > 0 && state.answeredCount >= state.sessionSize && !state.summaryDismissed
   const lifetimeStats = useMemo(
     () =>
       createAggregateStats(
@@ -106,6 +107,10 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     }),
     [preferences.lastSessionSummary?.completedAt, state.logs, state.sessionSize, summary],
   )
+  const latestSessionReview = preferences.sessionReviews[0] ?? null
+  const hasSessionReports = preferences.sessionReviews.length > 0
+  const reportOpen = state.reportSource !== null
+  const reportSummary = state.reportSource === 'history-latest' ? latestSessionReview : currentReview
 
   useEffect(() => {
     onPreferencesChange((current) => ({
@@ -142,6 +147,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
       lastSessionSummary: completedReview,
       sessionReviews: appendSessionReview(current.sessionReviews, completedReview),
     }))
+    setState((currentState) => ({ ...currentState, reportSource: 'auto-current' }))
   }, [aggregateStats, onPreferencesChange, state.answeredCount, state.logs, state.sessionSize, state.times, summary])
 
   useEffect(() => {
@@ -298,8 +304,16 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     [totalPages],
   )
 
-  const setSummaryOpen = useCallback((open: boolean) => {
-    setState((currentState) => ({ ...currentState, summaryDismissed: !open }))
+  const openLatestReport = useCallback(() => {
+    if (!latestSessionReview) {
+      return
+    }
+
+    setState((currentState) => ({ ...currentState, reportSource: 'history-latest' }))
+  }, [latestSessionReview])
+
+  const closeReport = useCallback(() => {
+    setState((currentState) => ({ ...currentState, reportSource: null }))
   }, [])
 
   const startNewSession = useCallback(
@@ -323,13 +337,18 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     current: state.current,
     currentReview,
     feedback: state.feedback,
+    hasSessionReports,
     lastSessionSummary: preferences.lastSessionSummary,
+    latestSessionReview,
     lifetimeStats,
     logPage: safeLogPage,
+    openLatestReport,
     pagedLogs,
     pool,
     progress,
     reactionMs: state.reactionMs,
+    reportOpen,
+    reportSummary,
     scriptMode,
     sessionIndex: state.sessionIndex,
     sessionReviews: preferences.sessionReviews,
@@ -337,14 +356,13 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     stats: aggregateStats,
     statsLabel,
     summary,
-    summaryOpen,
     totalPages,
     masteryReached,
+    closeReport,
     setAnswer,
     setLogPage,
     setScriptMode,
     setSessionSize,
-    setSummaryOpen,
     startNewSession,
     submitAnswer,
     skipQuestion,

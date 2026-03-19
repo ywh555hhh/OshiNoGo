@@ -8,19 +8,26 @@ interface LogTableProps {
   page: number
   totalPages: number
   emptyMessage?: string
+  heading?: string
+  pageHint?: string
 }
 
-export function LogTable({ logs, page, totalPages, emptyMessage = '这一页还没有记录。' }: LogTableProps) {
+export function LogTable({
+  logs,
+  page,
+  totalPages,
+  emptyMessage = '这一页还没有记录。',
+  heading = '本组答题日志（最新在上）',
+  pageHint = '单页最多显示 50 条；可以在卡片内上下滑动查看，手机上也支持左右滑动看完整表格。',
+}: LogTableProps) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <div>本组答题日志（最新在上）</div>
+        <div>{heading}</div>
         <div>第 {page}/{totalPages} 页</div>
       </div>
       <div className="overflow-hidden rounded-2xl border">
-        <div className="border-b px-4 py-3 text-xs text-muted-foreground">
-          单页最多显示 50 条；可以在卡片内上下滑动查看，手机上也支持左右滑动看完整表格。
-        </div>
+        <div className="border-b px-4 py-3 text-xs text-muted-foreground">{pageHint}</div>
         <div className="max-h-[65vh] overflow-auto overscroll-contain">
           <div className="min-w-[720px]">
             <Table>
