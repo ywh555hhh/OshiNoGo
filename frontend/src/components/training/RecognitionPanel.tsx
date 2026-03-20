@@ -125,10 +125,64 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
           </Badge>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <KanaFilterBar activeSets={activeSets} onToggle={toggleKanaSet} />
-          <ScriptModeSwitch value={scriptMode} onChange={setScriptMode} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="min-w-0">
+            <KanaFilterBar activeSets={activeSets} onToggle={toggleKanaSet} />
+          </div>
+          <div className="min-w-0">
+            <ScriptModeSwitch value={scriptMode} onChange={setScriptMode} />
+          </div>
+          <div className="min-w-0 space-y-2 md:col-span-2 xl:col-span-1">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-muted-foreground">提交后反馈</div>
+              <p className="text-xs leading-5 text-muted-foreground">只影响 Enter / 确认；跳过不受影响。</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(['result-sound', 'speak-kana'] as RecognitionAnswerFeedbackMode[]).map((mode) => {
+                const option = FEEDBACK_MODE_COPY[mode]
+                const selected = preferences.answerFeedbackMode === mode
+                return (
+                  <Button
+                    key={mode}
+                    type="button"
+                    variant={selected ? 'default' : 'outline'}
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setAnswerFeedbackMode(mode)}
+                    aria-pressed={selected}
+                    title={option.description}
+                  >
+                    {option.label}
+                  </Button>
+                )
+              })}
+            </div>
+          </div>
         </div>
+
+        {preferences.answerFeedbackMode === 'speak-kana' ? (
+          <div className="space-y-2 md:max-w-3xl">
+            <div className={speechHintClassName}>
+              <div className="flex items-start gap-2 font-medium">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <div>
+                  <div>{capability.label}</div>
+                  <div className={cn('mt-1 font-normal', isLimited || isUnsupported ? 'text-current/85' : 'text-muted-foreground')}>
+                    {capability.hint}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-4 sm:gap-y-1">
+              {submitFeedbackMessage ? <p className="text-xs leading-5 text-muted-foreground">{submitFeedbackMessage}</p> : null}
+              {isUnsupported ? (
+                <p className="text-xs leading-5 text-muted-foreground">
+                  当前浏览器无法直接朗读时，提交后会自动回退到正误音效，避免反馈静默失效。
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {isDakuonActive ? (
           <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-900 dark:text-sky-100">
@@ -175,7 +229,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
           <div className="grid gap-3 rounded-[1.5rem] border bg-muted/20 p-4 sm:grid-cols-2">
             <RecentStat label="累计已答" value={`${lifetimeStats.total}`} />
             <RecentStat
@@ -223,60 +277,6 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
             <Button className="w-full" onClick={() => startNewSession(sessionSize)}>
               开始新一组
             </Button>
-
-            <div className="rounded-2xl border bg-muted/20 p-4">
-              <div className="space-y-1">
-                <div className="text-sm font-semibold text-foreground">提交后反馈</div>
-                <p className="text-xs leading-5 text-muted-foreground">
-                  只影响按 Enter / 点击确认后的反馈；跳过仍保持当前处理方式。
-                </p>
-              </div>
-              <div className="mt-3 grid gap-2">
-                {(['result-sound', 'speak-kana'] as RecognitionAnswerFeedbackMode[]).map((mode) => {
-                  const option = FEEDBACK_MODE_COPY[mode]
-                  const selected = preferences.answerFeedbackMode === mode
-                  return (
-                    <Button
-                      key={mode}
-                      type="button"
-                      variant={selected ? 'default' : 'outline'}
-                      className="h-auto w-full items-start justify-start rounded-2xl px-4 py-3 text-left"
-                      onClick={() => setAnswerFeedbackMode(mode)}
-                      aria-pressed={selected}
-                    >
-                      <div>
-                        <div className="text-sm font-semibold">{option.label}</div>
-                        <div className={cn('mt-1 text-xs leading-5', selected ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
-                          {option.description}
-                        </div>
-                      </div>
-                    </Button>
-                  )
-                })}
-              </div>
-
-              {preferences.answerFeedbackMode === 'speak-kana' ? (
-                <div className="mt-3 space-y-2">
-                  <div className={speechHintClassName}>
-                    <div className="flex items-start gap-2 font-medium">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <div>
-                        <div>{capability.label}</div>
-                        <div className={cn('mt-1 font-normal', isLimited || isUnsupported ? 'text-current/85' : 'text-muted-foreground')}>
-                          {capability.hint}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {submitFeedbackMessage ? <p className="text-xs leading-5 text-muted-foreground">{submitFeedbackMessage}</p> : null}
-                  {isUnsupported ? (
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      当前浏览器无法直接朗读时，提交后会自动回退到正误音效，避免反馈静默失效。
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
 
             <div className="rounded-2xl border bg-muted/20 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
