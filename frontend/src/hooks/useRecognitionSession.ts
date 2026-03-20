@@ -7,6 +7,7 @@ import { buildRecognitionSummary, buildSessionBreakdown, createAggregateStats, h
 import type { RecognitionPreferences } from '@/hooks/useAppPreferences'
 import { appendSessionReview, mergeLifetimeStats } from '@/hooks/useAppPreferences'
 import { playResultSound } from '@/lib/audio'
+import { getSpeechCapability, speakJapanese } from '@/lib/speech'
 import { clamp, formatMs, now } from '@/lib/utils'
 import type {
   FeedbackState,
@@ -47,6 +48,7 @@ function createSessionState(pool: KanaItem[], requestedSize = DEFAULT_SESSION_SI
     current,
     answer: '',
     feedback: buildInitialFeedback(),
+    submitFeedbackMessage: '',
     logs: [] as RecognitionLogEntry[],
     answeredCount: 0,
     correctCount: 0,
@@ -122,6 +124,16 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
       sessionSize: state.sessionSize,
     }))
   }, [activeSets, onPreferencesChange, scriptMode, state.sessionSize])
+
+  useEffect(() => {
+    if (preferences.answerFeedbackMode === 'speak-kana') {
+      return
+    }
+
+    setState((currentState) =>
+      currentState.submitFeedbackMessage ? { ...currentState, submitFeedbackMessage: '' } : currentState,
+    )
+  }, [preferences.answerFeedbackMode])
 
   useEffect(() => {
     if (state.answeredCount < state.sessionSize || persistedSessionIdRef.current === sessionIdRef.current) {
@@ -237,6 +249,25 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     })
   }, [])
 
+  const playSubmitFeedback = useCallback(
+    (ok: boolean, kana: string) => {
+      if (preferences.answerFeedbackMode === 'result-sound') {
+        playResultSound(ok)
+        return ''
+      }
+
+      const capability = getSpeechCapability()
+      if (capability.status === 'unsupported') {
+        playResultSound(ok)
+        return '当前浏览器暂不支持读出假名，本次已自动回退到正误音效。'
+      }
+
+      const playback = speakJapanese(kana)
+      return playback.message
+    },
+    [preferences.answerFeedbackMode],
+  )
+
   const submitAnswer = useCallback(() => {
     if (!currentQuestion || state.isTransitioning || transitionLockRef.current) {
       return
@@ -252,6 +283,8 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     transitionLockRef.current = true
     const measuredMs = startTimeRef.current ? now() - startTimeRef.current : 0
     const ok = normalized === currentRomaji
+    const submitFeedbackMessage = playSubmitFeedback(ok, currentKana)
+
     registerAnswer(ok, normalized, measuredMs)
     setState((currentState) => ({
       ...currentState,
@@ -261,10 +294,10 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
           ? `正确：${currentKana} → ${currentRomaji}`
           : `错误：你写的是 “${normalized}”，正确是 “${currentRomaji}”`,
       },
+      submitFeedbackMessage,
     }))
-    playResultSound(ok)
     scheduleAdvance()
-  }, [currentAnswer, currentQuestion, registerAnswer, scheduleAdvance, state.isTransitioning])
+  }, [currentAnswer, currentQuestion, playSubmitFeedback, registerAnswer, scheduleAdvance, state.isTransitioning])
 
   const skipQuestion = useCallback(() => {
     if (state.isTransitioning || transitionLockRef.current) {
@@ -372,6 +405,7 @@ export function useRecognitionSession({ preferences, onPreferencesChange }: UseR
     sessionSize: state.sessionSize,
     stats: aggregateStats,
     statsLabel,
+    submitFeedbackMessage: state.submitFeedbackMessage,
     summary,
     totalPages,
     masteryReached,

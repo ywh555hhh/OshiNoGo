@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FileText, Info, Keyboard } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, FileText, Info, Keyboard } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { TRAINING_HINT_COPY } from '@/content/siteCopy'
@@ -12,11 +12,24 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { RecognitionPreferences } from '@/hooks/useAppPreferences'
 import { useRecognitionSession } from '@/hooks/useRecognitionSession'
+import { useSpeechCapability } from '@/hooks/useSpeechCapability'
+import type { RecognitionAnswerFeedbackMode } from '@/types/training'
 import { cn, formatDateTime, formatMs, formatPercent } from '@/lib/utils'
 
 interface RecognitionPanelProps {
   preferences: RecognitionPreferences
   onPreferencesChange: (next: RecognitionPreferences | ((current: RecognitionPreferences) => RecognitionPreferences)) => void
+}
+
+const FEEDBACK_MODE_COPY: Record<RecognitionAnswerFeedbackMode, { label: string; description: string }> = {
+  'result-sound': {
+    label: '正误音效',
+    description: '保持当前训练节奏',
+  },
+  'speak-kana': {
+    label: '读出假名',
+    description: '提交后朗读这一题的正确假名',
+  },
 }
 
 export function RecognitionPanel({ preferences, onPreferencesChange }: RecognitionPanelProps) {
@@ -42,6 +55,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
     sessionSize,
     stats,
     statsLabel,
+    submitFeedbackMessage,
     totalPages,
     masteryReached,
     closeReport,
@@ -54,7 +68,7 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
     skipQuestion,
     toggleKanaSet,
   } = useRecognitionSession({ preferences, onPreferencesChange })
-
+  const { capability, isLimited, isUnsupported } = useSpeechCapability()
   const [sessionSizeInput, setSessionSizeInput] = useState(String(sessionSize))
 
   useEffect(() => {
@@ -76,6 +90,23 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
       }),
     [feedback.tone],
   )
+
+  const speechHintClassName = useMemo(
+    () =>
+      cn('rounded-2xl border p-3 text-xs leading-5', {
+        'border-amber-400/30 bg-amber-400/10 text-amber-900 dark:text-amber-100': isLimited,
+        'border-rose-400/30 bg-rose-400/10 text-rose-900 dark:text-rose-100': isUnsupported,
+        'border-muted bg-muted/20 text-muted-foreground': !isLimited && !isUnsupported,
+      }),
+    [isLimited, isUnsupported],
+  )
+
+  function setAnswerFeedbackMode(mode: RecognitionAnswerFeedbackMode): void {
+    onPreferencesChange((currentPreferences) => ({
+      ...currentPreferences,
+      answerFeedbackMode: mode,
+    }))
+  }
 
   const isDakuonActive = activeSets.includes('dakuon')
 
@@ -192,6 +223,60 @@ export function RecognitionPanel({ preferences, onPreferencesChange }: Recogniti
             <Button className="w-full" onClick={() => startNewSession(sessionSize)}>
               开始新一组
             </Button>
+
+            <div className="rounded-2xl border bg-muted/20 p-4">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-foreground">提交后反馈</div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  只影响按 Enter / 点击确认后的反馈；跳过仍保持当前处理方式。
+                </p>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {(['result-sound', 'speak-kana'] as RecognitionAnswerFeedbackMode[]).map((mode) => {
+                  const option = FEEDBACK_MODE_COPY[mode]
+                  const selected = preferences.answerFeedbackMode === mode
+                  return (
+                    <Button
+                      key={mode}
+                      type="button"
+                      variant={selected ? 'default' : 'outline'}
+                      className="h-auto w-full items-start justify-start rounded-2xl px-4 py-3 text-left"
+                      onClick={() => setAnswerFeedbackMode(mode)}
+                      aria-pressed={selected}
+                    >
+                      <div>
+                        <div className="text-sm font-semibold">{option.label}</div>
+                        <div className={cn('mt-1 text-xs leading-5', selected ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
+                          {option.description}
+                        </div>
+                      </div>
+                    </Button>
+                  )
+                })}
+              </div>
+
+              {preferences.answerFeedbackMode === 'speak-kana' ? (
+                <div className="mt-3 space-y-2">
+                  <div className={speechHintClassName}>
+                    <div className="flex items-start gap-2 font-medium">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <div>
+                        <div>{capability.label}</div>
+                        <div className={cn('mt-1 font-normal', isLimited || isUnsupported ? 'text-current/85' : 'text-muted-foreground')}>
+                          {capability.hint}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {submitFeedbackMessage ? <p className="text-xs leading-5 text-muted-foreground">{submitFeedbackMessage}</p> : null}
+                  {isUnsupported ? (
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      当前浏览器无法直接朗读时，提交后会自动回退到正误音效，避免反馈静默失效。
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
 
             <div className="rounded-2xl border bg-muted/20 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">

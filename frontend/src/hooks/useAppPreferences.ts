@@ -4,6 +4,7 @@ import { usePersistentState } from '@/hooks/usePersistentState'
 import type {
   KanaSet,
   LifetimeStats,
+  RecognitionAnswerFeedbackMode,
   RecognitionLogEntry,
   ScriptMode,
   SessionKanaReview,
@@ -13,7 +14,7 @@ import type {
   TrainingMode,
 } from '@/types/training'
 
-const APP_PREFERENCES_VERSION = 2
+const APP_PREFERENCES_VERSION = 3
 const APP_PREFERENCES_KEY = 'oshinogo.app-preferences'
 const MAX_STORED_SESSION_REVIEWS = 24
 
@@ -21,6 +22,7 @@ export interface RecognitionPreferences {
   activeSets: KanaSet[]
   scriptMode: ScriptMode
   sessionSize: number
+  answerFeedbackMode: RecognitionAnswerFeedbackMode
   lifetimeStats: LifetimeStats
   lastSessionSummary: StoredSessionSummary | null
   sessionReviews: StoredSessionReview[]
@@ -59,6 +61,7 @@ const DEFAULT_RECOGNITION_PREFERENCES: RecognitionPreferences = {
   activeSets: ['seion'],
   scriptMode: 'hiragana',
   sessionSize: 50,
+  answerFeedbackMode: 'result-sound',
   lifetimeStats: DEFAULT_LIFETIME_STATS,
   lastSessionSummary: null,
   sessionReviews: [],
@@ -113,6 +116,13 @@ function normalizeTheme(value: unknown) {
   return DEFAULT_APP_PREFERENCES.theme
 }
 
+function normalizeRecognitionAnswerFeedbackMode(value: unknown, fallback: RecognitionAnswerFeedbackMode) {
+  if (value === 'result-sound' || value === 'speak-kana') {
+    return value
+  }
+
+  return fallback
+}
 function normalizeMode(value: unknown) {
   if (value === 'recognition' || value === 'dictation' || value === 'words') {
     return value
@@ -300,6 +310,10 @@ function normalizeRecognitionPreferences(value: unknown): RecognitionPreferences
     activeSets: normalizeSets(candidate.activeSets, DEFAULT_RECOGNITION_PREFERENCES.activeSets),
     scriptMode: normalizeScriptMode(candidate.scriptMode, DEFAULT_RECOGNITION_PREFERENCES.scriptMode),
     sessionSize: normalizeNumber(candidate.sessionSize, DEFAULT_RECOGNITION_PREFERENCES.sessionSize, 10, 500),
+    answerFeedbackMode: normalizeRecognitionAnswerFeedbackMode(
+      candidate.answerFeedbackMode,
+      DEFAULT_RECOGNITION_PREFERENCES.answerFeedbackMode,
+    ),
     lifetimeStats: normalizeLifetimeStats(candidate.lifetimeStats),
     lastSessionSummary,
     sessionReviews: normalizeSessionReviews((candidate as { sessionReviews?: unknown }).sessionReviews, lastSessionSummary),

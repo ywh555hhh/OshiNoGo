@@ -3,6 +3,7 @@ export type ScriptMode = 'hiragana' | 'katakana' | 'mixed'
 export type ThemePreference = 'light' | 'dark' | 'system'
 export type TrainingMode = 'recognition' | 'dictation' | 'words'
 export type SpeechCapabilityStatus = 'ready' | 'limited' | 'unsupported'
+export type RecognitionAnswerFeedbackMode = 'result-sound' | 'speak-kana'
 
 export interface KanaItem {
   kana: string
