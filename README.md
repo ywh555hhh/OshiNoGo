@@ -108,6 +108,7 @@ frontend/src/
 ```
 
 架构契约见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)。三条铁律：
+
 - **R0** 手机是第一上帝（微信 / QQ 内置浏览器是一等环境）
 - **R1** 作答通道决定能不能测（onset 不可知，就不测）
 - **R2** 事件日志是唯一真相（状态是数据，不是组件树）
