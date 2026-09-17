@@ -42,7 +42,7 @@ export function ResultCard({ summary, trend, extra, onRestart }: ResultCardProps
           <div className="mt-1 text-xs text-muted-foreground">items correct per minute</div>
 
           {!summary.sufficient ? (
-            <p className="mt-3 text-xs text-[hsl(var(--wrong))]">
+            <p className="mt-3 text-xs text-wrong">
               样本不足（{summary.attempts} 题，需要 30 题以上），这一组的数字不构成结论。
             </p>
           ) : null}

@@ -24,7 +24,7 @@ export function Trend({ points }: { points: readonly TrendPoint[] }) {
     <div className="space-y-2">
       <div className="flex items-end justify-between text-xs text-muted-foreground">
         <span>最近 {points.length} 组 · 个/分</span>
-        <span className={delta >= 0 ? 'text-[hsl(var(--right))]' : 'text-[hsl(var(--wrong))]'}>
+        <span className={delta >= 0 ? 'text-correct' : 'text-wrong'}>
           {delta >= 0 ? '+' : ''}
           {delta.toFixed(0)}%
         </span>

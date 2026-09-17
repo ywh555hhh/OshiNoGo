@@ -243,7 +243,7 @@ function App() {
       </div>
 
       {storageWarning ? (
-        <p className="text-xs leading-5 text-[hsl(var(--wrong))]">
+        <p className="text-xs leading-5 text-wrong">
           浏览器拒绝本地保存（无痕模式或配额已满）。现在可以练，但刷新就会丢。建议导出档案。
         </p>
       ) : null}

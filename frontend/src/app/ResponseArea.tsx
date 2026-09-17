@@ -155,14 +155,14 @@ function SpeakSelfCheck({ expected, prompt, onSelfReport }: ResponseAreaProps) {
         <button
           type="button"
           onPointerDown={() => onSelfReport(true)}
-          className="h-14 rounded-2xl border bg-card text-base font-semibold text-[hsl(var(--right))] active:scale-[0.97]"
+          className="h-14 rounded-2xl border bg-card text-base font-semibold text-correct active:scale-[0.97]"
         >
           读对了
         </button>
         <button
           type="button"
           onPointerDown={() => onSelfReport(false)}
-          className="h-14 rounded-2xl border bg-card text-base font-semibold text-[hsl(var(--wrong))] active:scale-[0.97]"
+          className="h-14 rounded-2xl border bg-card text-base font-semibold text-wrong active:scale-[0.97]"
         >
           没读出来
         </button>

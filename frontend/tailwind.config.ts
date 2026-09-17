@@ -23,7 +23,9 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        right: 'hsl(var(--right))',
+        // 不叫 right：text-right 是 Tailwind 内置的对齐工具类，
+        // 同名颜色会被解析成 text-align 而不是颜色，根本够不着。
+        correct: 'hsl(var(--correct))',
         wrong: 'hsl(var(--wrong))',
       },
       borderRadius: {
