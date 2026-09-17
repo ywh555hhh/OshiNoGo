@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest'
 
-import { METRIC_SUPPORT, RESPONSE_CHANNELS, channelsPresent, isSelfReported } from '../channels'
+import {
+  METRIC_SUPPORT,
+  ONSET_SOURCES,
+  RESPONSE_CHANNELS,
+  channelsPresent,
+  isSelfReported,
+  metricSupportFor,
+} from '../channels'
 import { summarize } from '../metrics'
-import type { ResponseChannel, TrialEvent } from '../types'
+import { DEFAULT_SCHEDULE } from '../schedule'
+import {
+  createAnswerIndex,
+  createSession,
+  deriveSummary,
+  step,
+  type DrillSpec,
+  type SessionConfig,
+  type SessionState,
+} from '../session'
+import type { OnsetSource, ResponseChannel, TrialEvent } from '../types'
+import { DICTATION_PRERENDERED, DICTATION_TTS, POOL } from './fixtures'
 
 function trial(
   channel: ResponseChannel,
@@ -49,8 +67,7 @@ describe('METRIC_SUPPORT —— R1 的可执行形式', () => {
   })
 })
 
-describe('isSelfReported', () => {
-  it('只认自评的两个 reason', () => {
+describe('isSelfReported', () => {  it('只认自评的两个 reason', () => {
     expect(isSelfReported('self-pass')).toBe(true)
     expect(isSelfReported('self-fail')).toBe(true)
     expect(isSelfReported('correct')).toBe(false)
@@ -136,5 +153,114 @@ describe('summarize —— 混通道必须可检测', () => {
     expect(metrics.channels).toEqual([
       { channel: 'type', attempts: 1, correct: 1, selfReported: false },
     ])
+  })
+})
+
+describe('metricSupportFor —— 刺激侧与响应侧都要过关', () => {
+  it('tap + 画面起表 → 三个指标全部成立', () => {
+    expect(metricSupportFor('tap', 'paint')).toEqual({
+      machineGraded: true,
+      reactionTime: true,
+      throughput: true,
+    })
+  })
+
+  it('tap + 预渲染音频 → 速度指标仍然成立（我们确定它何时响）', () => {
+    expect(metricSupportFor('tap', 'audio-scheduled').reactionTime).toBe(true)
+    expect(metricSupportFor('tap', 'audio-scheduled').throughput).toBe(true)
+  })
+
+  it('tap + TTS → 速度指标全部不成立，但仍是机器判分', () => {
+    expect(metricSupportFor('tap', 'audio-unknown')).toEqual({
+      machineGraded: true,
+      reactionTime: false,
+      throughput: false,
+    })
+  })
+
+  it('打字通道无论 onset 如何都没有单题 RT —— 响应侧就过不了', () => {
+    for (const onset of ONSET_SOURCES) {
+      expect(metricSupportFor('type', onset).reactionTime).toBe(false)
+    }
+  })
+
+  it('onset 不可知时吞吐也一并作废：TTS 的启动与音节时长逐条不同', () => {
+    for (const channel of RESPONSE_CHANNELS) {
+      expect(metricSupportFor(channel, 'audio-unknown').throughput).toBe(false)
+    }
+  })
+
+  it('自评属性不受 onset 影响 —— 那是判分来源，不是计时', () => {
+    const onsets: OnsetSource[] = ['paint', 'audio-scheduled', 'audio-unknown']
+    for (const onset of onsets) {
+      expect(metricSupportFor('speak', onset).machineGraded).toBe(false)
+      expect(metricSupportFor('tap', onset).machineGraded).toBe(true)
+    }
+  })
+})
+
+describe('deriveSummary 会把无效指标扶平', () => {
+  function runTap(spec: DrillSpec, rounds: number): SessionState {
+    const settings: SessionConfig = {
+      pool: POOL,
+      spec,
+      schedule: DEFAULT_SCHEDULE,
+      durationMs: 60_000,
+      trialCap: null,
+      seed: 3,
+    }
+    const index = createAnswerIndex(settings)
+    let state = step(createSession(settings), { type: 'start', at: 0 }, settings, index)
+
+    for (let round = 0; round < rounds; round += 1) {
+      state = step(state, { type: 'present', at: round * 1000 }, settings, index)
+      const correct = state.options.find((option) => option.correct)
+      if (!correct) {
+        throw new Error('没有正确选项')
+      }
+      state = step(
+        state,
+        { type: 'choose', at: round * 1000 + 400, choiceId: correct.id },
+        settings,
+        index,
+      )
+    }
+
+    return state
+  }
+
+  it('TTS 听写：RT 为 null、吞吐为 0，且 support 自己声明不成立', () => {
+    const settings: SessionConfig = {
+      pool: POOL,
+      spec: DICTATION_TTS,
+      schedule: DEFAULT_SCHEDULE,
+      durationMs: 60_000,
+      trialCap: null,
+      seed: 3,
+    }
+    const summary = deriveSummary(runTap(DICTATION_TTS, 5), 6000, settings)
+
+    expect(summary.attempts).toBe(5)
+    expect(summary.accuracy).toBe(100)
+    expect(summary.medianRt).toBeNull()
+    expect(summary.cv).toBeNull()
+    expect(summary.icpm).toBe(0)
+    expect(summary.support).toMatchObject({ reactionTime: false, throughput: false })
+  })
+
+  it('同一个 drill 换成预渲染音频 → 速度指标自动回来（只差一个字段）', () => {
+    const settings: SessionConfig = {
+      pool: POOL,
+      spec: DICTATION_PRERENDERED,
+      schedule: DEFAULT_SCHEDULE,
+      durationMs: 60_000,
+      trialCap: null,
+      seed: 3,
+    }
+    const summary = deriveSummary(runTap(DICTATION_PRERENDERED, 5), 6000, settings)
+
+    expect(summary.medianRt).toBe(400)
+    expect(summary.icpm).toBeGreaterThan(0)
+    expect(summary.support).toMatchObject({ reactionTime: true, throughput: true })
   })
 })

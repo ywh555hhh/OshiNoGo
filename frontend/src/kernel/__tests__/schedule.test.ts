@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import type { ItemPrior } from '../history'
 import { DEFAULT_SCHEDULE, findRequeuable, pickNext, weightFor } from '../schedule'
 import type { GradeReason, Item, TrialEvent } from '../types'
 
+/** schedule 测的是调度机制，不需要假名，用合成池更直白。 */
 const POOL: Item[] = [
   { id: 'A', prompt: 'A' },
   { id: 'B', prompt: 'B' },
@@ -117,8 +119,7 @@ describe('weightFor —— 调度的优先级顺序（不依赖具体调参）',
 })
 
 describe('pickNext', () => {
-  it('池子为空 → null，不崩', () => {
-    expect(pickNext({ pool: [], events: [], config: DEFAULT_SCHEDULE, rngState: 1 })).toBeNull()
+  it('池子为空 → null，不崩', () => {    expect(pickNext({ pool: [], events: [], config: DEFAULT_SCHEDULE, rngState: 1 })).toBeNull()
   })
 
   it('同样的种子 + 同样的历史 → 同样的下一题（可重放）', () => {
@@ -170,5 +171,97 @@ describe('pickNext', () => {
     expect(weak).toBeGreaterThan(mastered * 3)
     expect(unseen).toBeGreaterThan(weak)
     expect(counts.get('B') ?? 0).toBe(0)
+  })
+})
+
+describe('跨场次先验 —— 调度器真的会「学习」', () => {
+  const weakPrior: ItemPrior = {
+    itemId: 'A',
+    attempts: 10,
+    correct: 0,
+    accuracy: 0,
+    medianRt: null,
+    lastSeenAt: 0,
+    streak: 0,
+    box: 1,
+  }
+  const graduatedPrior: ItemPrior = {
+    itemId: 'B',
+    attempts: 20,
+    correct: 20,
+    accuracy: 1,
+    medianRt: 300,
+    lastSeenAt: 0,
+    streak: 20,
+    box: 2,
+  }
+
+  function priorMap(...priors: ItemPrior[]): Map<string, ItemPrior> {
+    return new Map(priors.map((prior) => [prior.itemId, prior]))
+  }
+
+  function draw(prior?: Map<string, ItemPrior>): Map<string, number> {
+    // maxRequeues: 0 关掉回插路径，隔离出纯加权路径
+    const config = { ...DEFAULT_SCHEDULE, maxRequeues: 0 }
+    const counts = new Map<string, number>()
+    let rngState = 4242
+
+    for (let index = 0; index < 2000; index += 1) {
+      const picked = pickNext({ pool: POOL, events: [], config, rngState, prior })
+      if (!picked) {
+        throw new Error('pickNext 意外返回 null')
+      }
+      rngState = picked.rngState
+      counts.set(picked.item.id, (counts.get(picked.item.id) ?? 0) + 1)
+    }
+
+    return counts
+  }
+
+  it('本组一个项都还没见过时，历史弱项依然被优先抽出', () => {
+    const counts = draw(priorMap(weakPrior, graduatedPrior))
+
+    const weak = counts.get('A') ?? 0
+    const graduated = counts.get('B') ?? 0
+
+    // 这是「把产品从测变成练」的验收点：
+    // 没有先验时这两项无从区分，只有跨场次历史能让它们分开。
+    expect(weak).toBeGreaterThan(graduated * 10)
+    expect(graduated).toBeGreaterThan(0)
+  })
+
+  it('没有先验时一视同仁 —— 差异确实来自历史，不是来自随机性', () => {
+    const counts = draw()
+    const a = counts.get('A') ?? 0
+    const b = counts.get('B') ?? 0
+
+    expect(Math.abs(a - b)).toBeLessThan(200)
+  })
+
+  it('毕业项被降权但不清零（保留「保持」抽查）', () => {
+    const stats = { attempts: 20, correct: 20, rts: [300] }
+    const withoutPrior = weightFor(stats, DEFAULT_SCHEDULE)
+    const withGraduated = weightFor(stats, DEFAULT_SCHEDULE, graduatedPrior)
+
+    expect(withGraduated).toBeLessThan(withoutPrior)
+    expect(withGraduated).toBeGreaterThan(0)
+  })
+
+  it('先验与本组计数是「计数相加」，不是两次比率的平均', () => {
+    // 历史上 30 次全对，本组刚错了一次 —— 总体仍然算熟练，
+    // 不该因为一次失误就把权重拉到接近全新项。
+    const solid: ItemPrior = {
+      itemId: 'A',
+      attempts: 30,
+      correct: 30,
+      accuracy: 1,
+      medianRt: 300,
+      lastSeenAt: 0,
+      streak: 30,
+      box: 1,
+    }
+
+    const pooled = weightFor({ attempts: 1, correct: 0, rts: [] }, DEFAULT_SCHEDULE, solid)
+    expect(pooled).toBeLessThan(weightFor(undefined, DEFAULT_SCHEDULE))
   })
 })

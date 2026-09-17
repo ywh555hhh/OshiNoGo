@@ -10,7 +10,7 @@ import {
   type SessionState,
 } from '../session'
 import { DEFAULT_SCHEDULE } from '../schedule'
-import { DICTATION, POOL, RECOGNITION } from './fixtures'
+import { DICTATION_TTS, POOL, RECOGNITION } from './fixtures'
 
 function config(overrides: Partial<SessionConfig> = {}): SessionConfig {
   return {
@@ -209,7 +209,7 @@ describe('session —— 可重放性（R2）', () => {
   })
 
   it('同音歧义在 session 里被真正修掉了：听写 じ 点 ぢ 算对', () => {
-    const settings = config({ spec: DICTATION, seed: 4 })
+    const settings = config({ spec: DICTATION_TTS, seed: 4 })
     const index = createAnswerIndex(settings)
     let state = createSession(settings)
     state = step(state, { type: 'start', at: 0 }, settings, index)

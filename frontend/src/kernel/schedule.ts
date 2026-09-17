@@ -1,3 +1,4 @@
+import type { ItemPrior } from './history'
 import { median } from './metrics'
 import { pickWeighted } from './random'
 import type { Item, TrialEvent } from './types'
@@ -31,6 +32,13 @@ export interface PickRequest {
   events: readonly TrialEvent[]
   config: ScheduleConfig
   rngState: number
+  /**
+   * 跨场次逐项历史。
+   *
+   * 有它，调度器才会真的「学习」；没有它，每一组都是孤立的一次测量。
+   * 这是把产品从「测」变成「练」的关键输入。
+   */
+  prior?: ReadonlyMap<string, ItemPrior>
 }
 
 export interface PickResult {
@@ -81,18 +89,33 @@ const ACCURACY_FLOOR = 0.15
  */
 const SPEED_FLOOR = 0.25
 
-export function weightFor(stats: ItemStats | undefined, config: ScheduleConfig): number {
-  if (!stats || stats.attempts === 0) {
+/** 毕业箱：准确率与速度都达标。 */
+const GRADUATED_BOX = 2
+
+/** 已毕业项的降权系数。不清零，保留「保持」抽查。 */
+const GRADUATED_DISCOUNT = 0.3
+
+export function weightFor(
+  stats: ItemStats | undefined,
+  config: ScheduleConfig,
+  prior?: ItemPrior,
+): number {
+  // 本组计数与跨场次先验合并（把计数相加，而不是对两个比率加权平均）——
+  // 这样样本多的那一侧自然更重，不需要另选权重参数。
+  const attempts = (stats?.attempts ?? 0) + (prior?.attempts ?? 0)
+  if (attempts === 0) {
     return config.unseenWeight
   }
 
-  const accuracy = stats.correct / stats.attempts
-  const rt = median(stats.rts) ?? config.targetRt
+  const correct = (stats?.correct ?? 0) + (prior?.correct ?? 0)
+  const accuracy = correct / attempts
+  const rt = median(stats?.rts ?? []) ?? prior?.medianRt ?? config.targetRt
 
   const accuracyFactor = Math.max(ACCURACY_FLOOR, (1 - accuracy) ** config.accExp)
   const speedFactor = Math.max(SPEED_FLOOR, rt / config.targetRt) ** config.speedExp
+  const graduation = prior?.box === GRADUATED_BOX ? GRADUATED_DISCOUNT : 1
 
-  return accuracyFactor * speedFactor
+  return accuracyFactor * speedFactor * graduation
 }
 
 /**
@@ -150,7 +173,7 @@ export function findRequeuable(
  * 第 3 层（跨场次 Leitner）在 P4。
  */
 export function pickNext(request: PickRequest): PickResult | null {
-  const { pool, events, config, rngState } = request
+  const { pool, events, config, rngState, prior } = request
 
   if (!pool.length) {
     return null
@@ -174,7 +197,7 @@ export function pickNext(request: PickRequest): PickResult | null {
     }
 
     candidates.push(item)
-    weights.push(weightFor(stats.get(item.id), config))
+    weights.push(weightFor(stats.get(item.id), config, prior?.get(item.id)))
   }
 
   const picked = pickWeighted(candidates, weights, rngState)

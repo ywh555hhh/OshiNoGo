@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { buildAnswerIndex, grade, normalize } from '../grading'
-import { DICTATION, POOL, RECOGNITION, itemById } from './fixtures'
+import { DICTATION_TTS, POOL, RECOGNITION, itemById } from './fixtures'
 
 describe('normalize', () => {
   it('把全角折成半角', () => {
@@ -69,9 +69,9 @@ describe('grade —— 视觉认读', () => {
 })
 
 describe('grade —— 听觉听写（同音歧义）', () => {
-  const index = buildAnswerIndex(POOL, DICTATION)
+  const index = buildAnswerIndex(POOL, DICTATION_TTS)
   const gradeWith = (id: string, response: string) =>
-    grade({ item: itemById(id), index, source: DICTATION, response })
+    grade({ item: itemById(id), index, source: DICTATION_TTS, response })
 
   it('答案集由感知等价类决定，不是由单个 item 决定', () => {
     // 这是原产品最严重的 bug：目标 じ，用户写 ぢ，被判错。

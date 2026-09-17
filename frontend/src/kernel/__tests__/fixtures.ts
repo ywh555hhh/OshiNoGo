@@ -56,6 +56,7 @@ const KANA_ANSWER_SOURCE = {
 export const RECOGNITION: DrillSpec = {
   id: 'kana-recognition',
   modality: 'visual',
+  onset: 'paint',
   channel: 'tap',
   choiceSize: 4,
   ...KANA_ANSWER_SOURCE,
@@ -65,6 +66,7 @@ export const RECOGNITION: DrillSpec = {
 export const TYPING: DrillSpec = {
   id: 'kana-typing',
   modality: 'visual',
+  onset: 'paint',
   channel: 'type',
   choiceSize: 0,
   ...KANA_ANSWER_SOURCE,
@@ -74,15 +76,21 @@ export const TYPING: DrillSpec = {
 export const SPEAKING: DrillSpec = {
   id: 'kana-speaking',
   modality: 'visual',
+  onset: 'paint',
   channel: 'speak',
   choiceSize: 0,
   ...KANA_ANSWER_SOURCE,
 }
 
-/** 听读音 → 写假名。感知等价类 = 读音，所以 あ/ア、じ/ぢ 互不可区分。 */
-export const DICTATION: DrillSpec = {
-  id: 'kana-dictation',
+/**
+ * 听读音 → 写假名，用 speechSynthesis 出声。
+ *
+ * onset 不可知，所以这个 drill **只能是练习**：没有 RT，也没有可比的吞吐。
+ */
+export const DICTATION_TTS: DrillSpec = {
+  id: 'kana-dictation-tts',
   modality: 'audio',
+  onset: 'audio-unknown',
   channel: 'tap',
   choiceSize: 4,
   percept: (item) => asKana(item).romaji,
@@ -91,9 +99,27 @@ export const DICTATION: DrillSpec = {
   labelOf: (item) => asKana(item).kana,
 }
 
+/**
+ * 同一个听写 drill，换成预渲染音频。
+ *
+ * 与上面只差 `onset` 一个字段 —— 这就是把「暂时做不到」和
+ * 「结构上做不到」分开的价值：音频管线到位后，速度指标自动回来。
+ */
+export const DICTATION_PRERENDERED: DrillSpec = {
+  ...DICTATION_TTS,
+  id: 'kana-dictation-prerendered',
+  onset: 'audio-scheduled',
+}
+
 /** 选项集相关的不变量只在有选项集的通道上有意义。 */
-export const CHOICE_SPECS: DrillSpec[] = [RECOGNITION, DICTATION]
-export const ALL_SPECS: DrillSpec[] = [RECOGNITION, TYPING, SPEAKING, DICTATION]
+export const CHOICE_SPECS: DrillSpec[] = [RECOGNITION, DICTATION_TTS, DICTATION_PRERENDERED]
+export const ALL_SPECS: DrillSpec[] = [
+  RECOGNITION,
+  TYPING,
+  SPEAKING,
+  DICTATION_TTS,
+  DICTATION_PRERENDERED,
+]
 
 export function itemById(id: string): KanaItem {
   const found = POOL.find((item) => item.id === id)

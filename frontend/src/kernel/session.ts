@@ -1,8 +1,17 @@
 import { buildChoiceSet, type Choice, type ChoiceSource } from './choices'
+import { metricSupportFor, type MetricSupport } from './channels'
 import { buildAnswerIndex, grade, type AnswerIndex, type AnswerKeySource } from './grading'
+import type { ItemPrior } from './history'
 import { summarize, type TrialMetrics } from './metrics'
 import { pickNext, type ScheduleConfig } from './schedule'
-import type { GradeReason, Item, Modality, ResponseChannel, TrialEvent } from './types'
+import type {
+  GradeReason,
+  Item,
+  Modality,
+  OnsetSource,
+  ResponseChannel,
+  TrialEvent,
+} from './types'
 
 /**
  * 一个 drill 的全部领域知识都在这里，而且只有这些。
@@ -11,7 +20,14 @@ import type { GradeReason, Item, Modality, ResponseChannel, TrialEvent } from '.
 export interface DrillSpec extends AnswerKeySource, ChoiceSource {
   id: string
   modality: Modality
-  /** 这个 drill 的作答通道。决定它能产出哪些指标（见 channels.ts）。 */
+  /**
+   * 刺激 onset 的来源。
+   *
+   * 和 `channel` 一起决定速度指标成不成立：**刺激侧与响应侧都要过关**。
+   * 这就是「用 TTS 出声的听写只能是练习、不能是测量」的编码位置。
+   */
+  onset: OnsetSource
+  /** 这个 drill 的作答通道。 */
   channel: ResponseChannel
   /**
    * 选项总数（含正确项）。**只对 tap 通道有意义**。
@@ -30,6 +46,8 @@ export interface SessionConfig {
   /** trial 上限；null = 无上限。 */
   trialCap: number | null
   seed: number
+  /** 跨场次逐项历史，用于让调度器学到「你弱在哪」。 */
+  prior?: ReadonlyMap<string, ItemPrior>
 }
 
 export interface SessionState {
@@ -282,6 +300,7 @@ function beginTrial(
     events: state.events,
     config: config.schedule,
     rngState: state.rngState,
+    prior: config.prior,
   })
 
   if (!pick) {
@@ -335,6 +354,9 @@ export interface SessionSummary extends TrialMetrics {
   elapsedMs: number
   finished: boolean
   channel: ResponseChannel
+  onset: OnsetSource
+  /** 这个 drill 实际支撑哪些指标。UI 从它决定显示什么，而不是自己判断。 */
+  support: MetricSupport
 }
 
 export function deriveSummary(
@@ -352,10 +374,19 @@ export function deriveSummary(
     channel: config.spec.channel,
   })
 
+  const support = metricSupportFor(config.spec.channel, config.spec.onset)
+
+  // 无效的指标在这里就被抹平：UI 拿不到一个不该存在的数字，
+  // 所以「给 onset 不可知的听写显示毫秒或个/分」在结构上做不到。
   return {
     ...metrics,
+    medianRt: support.reactionTime ? metrics.medianRt : null,
+    cv: support.reactionTime ? metrics.cv : null,
+    icpm: support.throughput ? metrics.icpm : 0,
     elapsedMs,
     finished: state.phase === 'finished',
     channel: config.spec.channel,
+    onset: config.spec.onset,
+    support,
   }
 }

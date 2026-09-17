@@ -7,7 +7,7 @@ export type ScriptMode = KanaScript | 'both'
 const asKana = (item: Item) => item as KanaItem
 
 /**
- * 三个 drill 共用同一套答案语义：看字形，答 romaji。
+ * 三个视觉 drill 共用同一套答案语义：看字形，答 romaji。
  *
  * `percept` 用**字形**：屏幕上的 じ 与 ぢ 是两张不同的图，所以它们是两道独立的题；
  * 但两者的 romaji 都是 ji，靠 aliases + 答案索引让两个都判对。
@@ -25,12 +25,13 @@ const KANA_ANSWER_SOURCE = {
 /**
  * 形 → 选音。
  *
- * 接受性方向。延迟只有触摸采样量级，所以三个指标全部有效。
+ * 接受性方向。延迟只有触摸采样量级，画面起表，所以三个指标全部有效。
  */
 export function tapSpec(choiceSize: number): DrillSpec {
   return {
     id: 'kana-tap',
     modality: 'visual',
+    onset: 'paint',
     channel: 'tap',
     choiceSize,
     ...KANA_ANSWER_SOURCE,
@@ -49,6 +50,7 @@ export function typeSpec(): DrillSpec {
   return {
     id: 'kana-type',
     modality: 'visual',
+    onset: 'paint',
     channel: 'type',
     // 不使用选项集
     choiceSize: 0,
@@ -69,9 +71,38 @@ export function speakSpec(): DrillSpec {
   return {
     id: 'kana-speak',
     modality: 'visual',
+    onset: 'paint',
     channel: 'speak',
     choiceSize: 0,
     ...KANA_ANSWER_SOURCE,
+  }
+}
+
+/**
+ * 音 → 选形（听写）。
+ *
+ * 两点与前三个 drill 本质不同：
+ *
+ * 1. **percept 用读音。** 所以 じ/ぢ 与 あ/ア 是同一组「答哪个都对」——
+ *    歧义在这里变成设计，而不是需要文案道歉的 bug。
+ * 2. **onset 不可知**（speechSynthesis 没有可靠的播放起点事件）。
+ *    于是这个 drill 只能是**不计时的练习**：没有 RT，也没有可比的吞吐，
+ *    因为每条的 TTS 启动与音节时长都不一样，「个/分」会被音频长度污染。
+ *
+ * 等预渲染音频管线到位，把 `onset` 改成 `'audio-scheduled'` 就能拿回速度指标，
+ * 其余代码一行都不用动。
+ */
+export function dictationSpec(choiceSize: number): DrillSpec {
+  return {
+    id: 'kana-dictation',
+    modality: 'audio',
+    onset: 'audio-unknown',
+    channel: 'tap',
+    choiceSize,
+    percept: (item: Item) => asKana(item).romaji,
+    expectOf: (item: Item) => asKana(item).kana,
+    acceptOf: (item: Item) => aliasesFor(asKana(item).romaji),
+    labelOf: (item: Item) => asKana(item).kana,
   }
 }
 

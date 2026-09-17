@@ -22,6 +22,25 @@ export interface Item {
 export type Modality = 'visual' | 'audio'
 
 /**
+ * 刺激 onset 的来源。**决定 Rt 能不能算**——这是 0.5 秒那个靶子唯一的地基。
+ *
+ * 注意：onset 是「刺激侧」的性质，作答通道是「响应侧」的性质。
+ * 两者独立，缺一个速度指标就不成立（见 channels.ts 的 metricSupportFor）。
+ */
+export type OnsetSource =
+  /** 双 rAF 之后起表：我们确定它已经上屏。 */
+  | 'paint'
+  /** 预渲染音频 + Web Audio 排程播放：我们确定它何时响。 */
+  | 'audio-scheduled'
+  /**
+   * speechSynthesis：onset 不可知（各平台实现不同、无可靠事件）。
+   *
+   * 这样的 drill 只能是**不计时的练习**：既没有 Rt，也没有可比的吞吐，
+   * 因为每条的 TTS 启动与音节时长都不一样，「个/分」会被音频长度污染。
+   */
+  | 'audio-unknown'
+
+/**
  * 作答通道。
  *
  * 这三者训练的是**不同的知识方向**，不可互相替代：

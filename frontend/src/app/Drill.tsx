@@ -154,9 +154,7 @@ export function Drill({
                 key={session.answeredCount}
                 className={cn(
                   'inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl border px-3 py-2',
-                  receipt.ok
-                    ? 'border-correct/30 bg-correct/10'
-                    : 'border-wrong/30 bg-wrong/10',
+                  receipt.ok ? 'border-correct/30 bg-correct/10' : 'border-wrong/30 bg-wrong/10',
                 )}
               >
                 <span className="text-xs text-muted-foreground">上一题</span>

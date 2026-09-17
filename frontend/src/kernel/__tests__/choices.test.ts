@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildChoiceSet } from '../choices'
 import { buildAnswerIndex, grade } from '../grading'
-import { CHOICE_SPECS, DICTATION, POOL, RECOGNITION, itemById, type KanaItem } from './fixtures'
+import { CHOICE_SPECS, DICTATION_TTS, POOL, RECOGNITION, itemById, type KanaItem } from './fixtures'
 
 describe('选项集 —— 不变量', () => {
   it('每一个带选项集的 drill、每一个 item：按钮标记与判分结论必须完全一致', () => {
@@ -79,11 +79,11 @@ describe('选项集 —— 不变量', () => {
   })
 
   it('听写 drill：じ 与 ぢ 同时出现，且都标记为正确', () => {
-    const index = buildAnswerIndex(POOL, DICTATION)
+    const index = buildAnswerIndex(POOL, DICTATION_TTS)
     const { options } = buildChoiceSet({
       target: itemById('ji-hira'),
       pool: POOL,
-      source: DICTATION,
+      source: DICTATION_TTS,
       index,
       size: 4,
       rngState: 3,

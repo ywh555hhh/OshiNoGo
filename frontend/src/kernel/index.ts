@@ -1,13 +1,36 @@
-export type { Item, Modality, ResponseChannel, GradeReason, TrialEvent } from './types'
+export type {
+  Item,
+  Modality,
+  OnsetSource,
+  ResponseChannel,
+  GradeReason,
+  TrialEvent,
+} from './types'
 
 export {
   METRIC_SUPPORT,
+  ONSET_SOURCES,
   RESPONSE_CHANNELS,
   channelsPresent,
   isMachineGradedChannel,
   isSelfReported,
+  metricSupportFor,
   type MetricSupport,
 } from './channels'
+
+export {
+  buildItemHistory,
+  computeLifetime,
+  plausibleWallClock,
+  rankSlowest,
+  rankWeakest,
+  type HistoryOptions,
+  type ItemHistory,
+  type ItemPrior,
+  type LeitnerBox,
+  type LifetimeStats,
+  type RankOptions,
+} from './history'
 
 export {
   normalize,
