@@ -1,4 +1,5 @@
 import type { SessionSummary } from '@/kernel'
+import { METRIC_SUPPORT } from '@/kernel'
 import type { ReactNode } from 'react'
 
 import { Trend } from './Trend'
@@ -14,19 +15,22 @@ interface ResultCardProps {
 
 const ONSET_TARGET_MS = 800
 
-function medianLabel(summary: SessionSummary): string {
-  if (summary.medianRt === null) {
-    return '—'
-  }
-
-  return `${Math.round(summary.medianRt)} ms`
-}
-
+/**
+ * 结果卡。
+ *
+ * 显示哪些指标由 `METRIC_SUPPORT[channel]` 决定，而不是由这里自己判断——
+ * 于是「给打字通道显示毫秒反应时间」这件事在结构上做不到。
+ */
 export function ResultCard({ summary, trend, extra, onRestart }: ResultCardProps) {
-  const hitTarget = summary.accuracy >= 95 && summary.medianRt !== null && summary.medianRt <= ONSET_TARGET_MS
+  const support = METRIC_SUPPORT[summary.channel]
+  const hitTarget =
+    support.reactionTime &&
+    summary.accuracy >= 95 &&
+    summary.medianRt !== null &&
+    summary.medianRt <= ONSET_TARGET_MS
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <div className="flex h-screen flex-col overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5">
         <h1 className="text-sm uppercase tracking-[0.3em] text-muted-foreground">本组结束</h1>
 
@@ -45,28 +49,48 @@ export function ResultCard({ summary, trend, extra, onRestart }: ResultCardProps
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Cell label="正确率" value={`${summary.accuracy.toFixed(1)}%`} />
+          <Cell
+            label={support.machineGraded ? '正确率' : '正确率（自评）'}
+            value={`${summary.accuracy.toFixed(1)}%`}
+          />
           <Cell label="题数" value={`${summary.attempts}`} />
-          <Cell label="中位反应" value={medianLabel(summary)} />
+          <Cell
+            label="中位反应"
+            value={support.reactionTime && summary.medianRt !== null
+              ? `${Math.round(summary.medianRt)} ms`
+              : '—'}
+          />
           <Cell
             label="稳定性 CV"
-            value={summary.cv === null ? '—' : summary.cv.toFixed(3)}
+            value={support.reactionTime && summary.cv !== null ? summary.cv.toFixed(3) : '—'}
           />
         </div>
 
-        {summary.medianRt !== null ? (
+        {support.reactionTime ? (
+          summary.medianRt !== null ? (
+            <p className="text-xs leading-5 text-muted-foreground">
+              {hitTarget ? '✓ ' : ''}
+              目标：正确率 ≥ 95% 且中位反应 ≤ {ONSET_TARGET_MS} ms。CV 越低说明越接近「自动化」
+              而不只是「变快」。
+            </p>
+          ) : null
+        ) : (
           <p className="text-xs leading-5 text-muted-foreground">
-            {hitTarget ? '✓ ' : ''}
-            目标：正确率 ≥ 95% 且中位反应 ≤ {ONSET_TARGET_MS} ms。
-            {' '}CV 越低说明越接近「自动化」而不只是「变快」。
+            这个通道不测反应时间：
+            {summary.channel === 'type'
+              ? '软键盘与输入法的延迟（50–150ms）远大于我们要测的东西，测出来的会是输入法而不是假名。'
+              : '没有可靠的自动判分手段，所以正确率是你自己判的。'}
+            {' '}但「个/分」依然有效——它只受每题的恒定开销影响，不影响通道内的趋势比较。
           </p>
-        ) : null}
+        )}
 
         <details className="rounded-2xl border bg-muted/20 p-4 text-sm">
           <summary className="cursor-pointer text-muted-foreground">诊断细节</summary>
           <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+            <li>通道：{summary.channel}</li>
             <li>排除的抢答（&lt;150ms）：{summary.excluded.anticipation}</li>
             <li>排除的走神（&gt;5000ms）：{summary.excluded.idle}</li>
+            <li>自评样本（不进速度统计）：{summary.excluded.selfReported}</li>
             <li>未作答（跳过）：{summary.excluded.unanswered}</li>
             <li>耗时：{(summary.elapsedMs / 1000).toFixed(1)} 秒</li>
           </ul>

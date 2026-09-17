@@ -1,4 +1,5 @@
-import type { TrialEvent } from './types'
+import { channelsPresent, isSelfReported } from './channels'
+import type { ResponseChannel, TrialEvent } from './types'
 
 /** 低于此值的 RT 视为抢答，不是真实作答。 */
 export const ANTICIPATION_MS = 150
@@ -69,13 +70,23 @@ export function toIcpm(correct: number, durationMs: number): number {
   return correct / (durationMs / 60_000)
 }
 
+export interface ChannelTally {
+  channel: ResponseChannel
+  attempts: number
+  correct: number
+  /** 该通道是否自评（自评准确率必须向用户明示）。 */
+  selfReported: boolean
+}
+
 export interface TrialMetrics {
   attempts: number
   correct: number
   accuracy: number
-  /** 只统计正确 trial 的 RT；已排除抢答与走神。 */
+  /** 准确率是否来自自评。为 true 时 UI 必须标注，不能当作机器判分。 */
+  accuracyIsSelfReported: boolean
+  /** 只统计机器判分且正确、且在合理区间的 trial。 */
   medianRt: number | null
-  /** 只统计正确 trial 的变异系数。 */
+  /** 只统计产生 medianRt 的那批样本。 */
   cv: number | null
   icpm: number
   /** 被排除的样本数，透明可见，不静默丢弃。 */
@@ -83,31 +94,56 @@ export interface TrialMetrics {
     anticipation: number
     idle: number
     unanswered: number
+    /** 因自评而无速度意义的样本。 */
+    selfReported: number
   }
   /** trial 数是否足以支撑结论。不足时 UI 必须显示「样本不足」。 */
   sufficient: boolean
+  /** 输入里出现过的通道，含各自的计数。 */
+  channels: ChannelTally[]
+  /**
+   * 输入里混了多种作答通道。
+   *
+   * 为 true 时，accuracy / icpm / medianRt 是跨通道混合的结果，
+   * **不可跨通道比较** —— 消费方必须分组或拒绝，不能当成一个数来解读。
+   */
+  mixedChannels: boolean
 }
 
 export interface SummarizeOptions {
   /** 冲刺时长。为 null 时用首末 onset 之差推断。 */
   durationMs?: number | null
+  /** 只看某一个通道。给了就同时消除了 mixedChannels 的风险。 */
+  channel?: ResponseChannel
 }
 
 /**
  * 从事件日志导出指标。纯函数，可对合成序列重放测试。
+ *
+ * 通道处理是这个函数的核心职责之一：
+ * - 自评 trial 计入准确率，但**不进 RT 统计**（没有机器可信的响应区间），
+ *   并且会被单独计数，让 UI 无法把它伪装成机器判分。
+ * - 出现多种通道时置 `mixedChannels`，把「不可比」这件事变成可检测的信号。
  */
 export function summarize(
   events: readonly TrialEvent[],
   options: SummarizeOptions = {},
 ): TrialMetrics {
+  const scoped = options.channel
+    ? events.filter((event) => event.channel === options.channel)
+    : events
+
+  const tallies = new Map<ResponseChannel, ChannelTally>()
+
   let attempts = 0
   let correct = 0
   let anticipation = 0
   let idle = 0
   let unanswered = 0
+  let selfReported = 0
   const correctRt: number[] = []
 
-  for (const event of events) {
+  for (const event of scoped) {
     if (event.reason === 'empty') {
       continue
     }
@@ -117,8 +153,27 @@ export function summarize(
       correct += 1
     }
 
+    let tally = tallies.get(event.channel)
+    if (!tally) {
+      tally = { channel: event.channel, attempts: 0, correct: 0, selfReported: false }
+      tallies.set(event.channel, tally)
+    }
+    tally.attempts += 1
+    if (event.ok) {
+      tally.correct += 1
+    }
+    if (isSelfReported(event.reason)) {
+      tally.selfReported = true
+    }
+
     if (event.tResponse === null) {
       unanswered += 1
+      continue
+    }
+
+    // 自评没有机器可信的响应区间，绝不进速度统计。
+    if (isSelfReported(event.reason)) {
+      selfReported += 1
       continue
     }
 
@@ -141,29 +196,35 @@ export function summarize(
     }
   }
 
-  const durationMs =
-    options.durationMs != null ? options.durationMs : inferDuration(events)
+  const durationMs = options.durationMs ?? inferDuration(scoped)
+
+  const channels = [...tallies.values()].sort(
+    (left, right) => right.attempts - left.attempts,
+  )
 
   return {
     attempts,
     correct,
     accuracy: attempts ? (correct / attempts) * 100 : 0,
+    accuracyIsSelfReported: channels.length > 0 && channels.every((tally) => tally.selfReported),
     medianRt: median(correctRt),
     cv: coefficientOfVariation(correctRt),
     icpm: toIcpm(correct, durationMs),
-    excluded: { anticipation, idle, unanswered },
+    excluded: { anticipation, idle, unanswered, selfReported },
     sufficient: attempts >= MIN_TRIALS_FOR_TREND,
+    channels,
+    mixedChannels: channelsPresent(scoped).length > 1,
   }
 }
 
 function inferDuration(events: readonly TrialEvent[]): number {
-  const onsets = events.filter((event) => event.tResponse !== null)
-  if (onsets.length < 2) {
+  const answered = events.filter((event) => event.tResponse !== null)
+  if (answered.length < 2) {
     return 0
   }
 
-  const first = Math.min(...onsets.map((event) => event.tOnset))
-  const last = Math.max(...onsets.map((event) => event.tResponse as number))
+  const first = Math.min(...answered.map((event) => event.tOnset))
+  const last = Math.max(...answered.map((event) => event.tResponse as number))
 
   return Math.max(0, last - first)
 }

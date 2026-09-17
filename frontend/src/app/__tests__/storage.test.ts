@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { Archive, ArchivedSession, TrialEvent } from '@/kernel'
+import type { Archive, ArchivedSession, ResponseChannel, TrialEvent } from '@/kernel'
 import { ARCHIVE_VERSION } from '@/kernel'
 
 import {
@@ -14,19 +14,30 @@ import {
   saveState,
 } from '../storage'
 
-function events(count: number, rt = 400): TrialEvent[] {
+function events(count: number, rt = 400, channel: ResponseChannel = 'tap'): TrialEvent[] {
   return Array.from({ length: count }, (_, index) => ({
     itemId: `item-${index}`,
     tOnset: index * 1000,
     tResponse: index * 1000 + rt,
-    response: 'a',
+    response: channel === 'speak' ? null : 'a',
     ok: true,
-    reason: 'correct' as const,
+    reason: channel === 'speak' ? ('self-pass' as const) : ('correct' as const),
+    channel,
   }))
 }
 
-function session(count = 30, durationMs: number | null = 60_000): ArchivedSession {
-  return { startedAt: 0, endedAt: durationMs, durationMs, events: events(count) }
+function session(
+  count = 30,
+  durationMs: number | null = 60_000,
+  channel: ResponseChannel = 'tap',
+): ArchivedSession {
+  return {
+    startedAt: 0,
+    endedAt: durationMs,
+    durationMs,
+    channel,
+    events: events(count, 400, channel),
+  }
 }
 
 function emptyArchive(): Archive {
@@ -72,7 +83,7 @@ describe('buildTrend', () => {
       sessions: [session(10), session(30)],
     }
 
-    expect(buildTrend(archive)).toHaveLength(1)
+    expect(buildTrend(archive, 'tap')).toHaveLength(1)
   })
 
   it('保留时间顺序，并带上 ICPM 与正确率', () => {
@@ -81,11 +92,44 @@ describe('buildTrend', () => {
       sessions: [session(30), session(30)],
     }
 
-    const trend = buildTrend(archive)
+    const trend = buildTrend(archive, 'tap')
 
     expect(trend).toHaveLength(2)
     expect(trend[0].icpm).toBeCloseTo(30, 5)
     expect(trend[0].accuracy).toBe(100)
+    expect(trend[0].selfReported).toBe(false)
+  })
+
+  it('必须按通道过滤 —— 把 tap 和 type 画在同一条趋势上等于在比较不可比的东西', () => {
+    const archive: Archive = {
+      ...emptyArchive(),
+      sessions: [session(30, 60_000, 'tap'), session(30, 60_000, 'type')],
+    }
+
+    expect(buildTrend(archive, 'tap')).toHaveLength(1)
+    expect(buildTrend(archive, 'type')).toHaveLength(1)
+    expect(buildTrend(archive, 'speak')).toHaveLength(0)
+  })
+
+  it('通道不一致的档案不会混进趋势（session 说 type、事件说 tap）', () => {
+    // persist 层会直接拒绝这种档案；万一它绕过来了，趋势层也不会把两边的数混算。
+    const inconsistent: Archive = {
+      ...emptyArchive(),
+      sessions: [{ ...session(30, 60_000, 'tap'), channel: 'type' }],
+    }
+
+    expect(buildTrend(inconsistent, 'type')).toHaveLength(0)
+    expect(buildTrend(inconsistent, 'tap')).toHaveLength(0)
+  })
+
+  it('自评通道的趋势会标明自评', () => {
+    const archive: Archive = { ...emptyArchive(), sessions: [session(30, 60_000, 'speak')] }
+
+    const trend = buildTrend(archive, 'speak')
+    expect(trend).toHaveLength(1)
+    expect(trend[0].selfReported).toBe(true)
+    // 自评没有机器可信的响应区间，所以不产生速度指标（趋势只有 icpm / accuracy）
+    expect(trend[0].icpm).toBeCloseTo(30, 5)
   })
 })
 

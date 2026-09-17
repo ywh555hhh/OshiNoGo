@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { KANA_SETS, KANA_SET_LABELS, type KanaSet } from '@/drills/kana/kana'
-import { RECOGNITION_SPEC_ID, recognitionSpec, selectPool } from '@/drills/kana/recognition'
-import { DEFAULT_SCHEDULE, type ArchivedSession, type SessionConfig } from '@/kernel'
+import { selectPool, speakSpec, tapSpec, typeSpec } from '@/drills/kana/specs'
+import {
+  DEFAULT_SCHEDULE,
+  RESPONSE_CHANNELS,
+  type ArchivedSession,
+  type DrillSpec,
+  type ResponseChannel,
+  type SessionConfig,
+} from '@/kernel'
 
 import { cn } from './cn'
 import { Drill } from './Drill'
@@ -17,7 +24,13 @@ import {
   type StoredState,
 } from './storage'
 import { useTheme } from './theme'
-import { configKey, parseDrillUrl, toSearch, type DrillUrl } from './urlConfig'
+import {
+  CHANNEL_LABELS,
+  configKey,
+  parseDrillUrl,
+  toSearch,
+  type DrillUrl,
+} from './urlConfig'
 
 const SPRINT_OPTIONS = [30, 60, 120, 0] as const
 const CHOICE_OPTIONS = [2, 3, 4, 6] as const
@@ -27,8 +40,22 @@ const SCRIPT_OPTIONS = [
   { value: 'both', label: '混合' },
 ] as const
 
+const DRILL_ID = 'kana'
+
+function specFor(config: DrillUrl): DrillSpec {
+  if (config.channel === 'type') {
+    return typeSpec()
+  }
+
+  if (config.channel === 'speak') {
+    return speakSpec()
+  }
+
+  return tapSpec(config.choiceSize)
+}
+
 function App() {
-  const [initial] = useState(() => loadState(RECOGNITION_SPEC_ID))
+  const [initial] = useState(() => loadState(DRILL_ID))
   const [store, setStore] = useState<StoredState>(initial.state)
   const [storageWarning, setStorageWarning] = useState(initial.degraded)
 
@@ -71,7 +98,7 @@ function App() {
   const sessionConfig = useMemo<SessionConfig>(
     () => ({
       pool: selectPool(config.sets, config.script),
-      spec: recognitionSpec(config.choiceSize),
+      spec: specFor(config),
       schedule: DEFAULT_SCHEDULE,
       durationMs: config.sprintSeconds > 0 ? config.sprintSeconds * 1000 : null,
       trialCap: null,
@@ -80,7 +107,11 @@ function App() {
     [config, seed],
   )
 
-  const trend = useMemo(() => buildTrend(store.archive), [store.archive])
+  // 趋势必须按通道分组：不同通道的 ICPM 不可比。
+  const trend = useMemo(
+    () => buildTrend(store.archive, config.channel),
+    [store.archive, config.channel],
+  )
 
   const handleFinish = useCallback(
     (session: ArchivedSession) => {
@@ -126,10 +157,22 @@ function App() {
   )
 
   // 设置放在结果卡里，而不是挤进 drill 的头部：
-  // 一屏一题的空间不该被 8 个开关占掉，而「看到成绩 → 调难度 → 再来一组」
+  // 一屏一题的空间不该被一堆开关占掉，而「看到成绩 → 调难度 → 再来一组」
   // 本来就是一个自然的循环。
   const settings = (
     <div className="space-y-5">
+      <Group label="练什么">
+        {RESPONSE_CHANNELS.map((channel) => (
+          <Chip
+            key={channel}
+            active={config.channel === channel}
+            onClick={() => setConfig((current) => withChannel(current, channel))}
+          >
+            {CHANNEL_LABELS[channel]}
+          </Chip>
+        ))}
+      </Group>
+
       <Group label="题库">
         {KANA_SETS.map((set) => (
           <Chip
@@ -154,17 +197,20 @@ function App() {
         ))}
       </Group>
 
-      <Group label="选项数">
-        {CHOICE_OPTIONS.map((size) => (
-          <Chip
-            key={size}
-            active={config.choiceSize === size}
-            onClick={() => setConfig((current) => ({ ...current, choiceSize: size }))}
-          >
-            {size}
-          </Chip>
-        ))}
-      </Group>
+      {/* 选项数只对 tap 通道有意义 */}
+      {config.channel === 'tap' ? (
+        <Group label="选项数">
+          {CHOICE_OPTIONS.map((size) => (
+            <Chip
+              key={size}
+              active={config.choiceSize === size}
+              onClick={() => setConfig((current) => ({ ...current, choiceSize: size }))}
+            >
+              {size}
+            </Chip>
+          ))}
+        </Group>
+      ) : null}
 
       <Group label="时长">
         {SPRINT_OPTIONS.map((seconds) => (
@@ -196,7 +242,10 @@ function App() {
             }}
           />
         </label>
-        <span>{store.archive.sessions.length} 组已归档</span>
+        <span>
+          {store.archive.sessions.filter((item) => item.channel === config.channel).length} 组已归档
+          （当前通道）
+        </span>
       </div>
 
       {storageWarning ? (
@@ -218,6 +267,11 @@ function App() {
       onRestart={restart}
     />
   )
+}
+
+/** 换通道时把选项数复位到默认：打字/朗读不使用选项集。 */
+function withChannel(config: DrillUrl, channel: ResponseChannel): DrillUrl {
+  return { ...config, channel, choiceSize: channel === 'tap' ? 4 : config.choiceSize }
 }
 
 function toggleSet(config: DrillUrl, set: KanaSet): DrillUrl {

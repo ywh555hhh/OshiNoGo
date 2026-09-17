@@ -27,6 +27,7 @@ function trial(
     response: ok ? 'x' : 'y',
     ok,
     reason,
+    channel: 'tap',
   }
 }
 
@@ -111,14 +112,22 @@ describe('summarize', () => {
     expect(metrics.accuracy).toBeCloseTo((4 / 6) * 100, 10)
     // 只取范围内的正确 trial：400 与 500
     expect(metrics.medianRt).toBe(450)
-    expect(metrics.excluded).toEqual({ anticipation: 1, idle: 1, unanswered: 1 })
+    expect(metrics.excluded).toEqual({
+      anticipation: 1,
+      idle: 1,
+      unanswered: 1,
+      selfReported: 0,
+    })
     expect(metrics.icpm).toBeCloseTo(4, 10)
   })
 
   it('排除项不静默丢弃 —— 数量必须暴露出来', () => {
     const metrics = summarize(events, { durationMs: 60_000 })
     expect(
-      metrics.excluded.anticipation + metrics.excluded.idle + metrics.excluded.unanswered,
+      metrics.excluded.anticipation +
+        metrics.excluded.idle +
+        metrics.excluded.unanswered +
+        metrics.excluded.selfReported,
     ).toBe(3)
   })
 

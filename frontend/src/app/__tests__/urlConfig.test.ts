@@ -16,12 +16,25 @@ describe('parseDrillUrl', () => {
   })
 
   it('解析完整配置', () => {
-    expect(parseDrillUrl('?set=dakuon,youon&script=both&n=6&sprint=30')).toEqual({
+    expect(parseDrillUrl('?set=dakuon,youon&script=both&ch=type&n=6&sprint=30')).toEqual({
       sets: ['dakuon', 'youon'],
       script: 'both',
+      channel: 'type',
       choiceSize: 6,
       sprintSeconds: 30,
     })
+  })
+
+  it('通道默认为 tap', () => {
+    expect(parseDrillUrl('').channel).toBe('tap')
+    expect(parseDrillUrl('?ch=banana').channel).toBe('tap')
+    expect(parseDrillUrl('?ch=SPEAK').channel).toBe('speak')
+  })
+
+  it('三个通道都能解析', () => {
+    expect(parseDrillUrl('?ch=tap').channel).toBe('tap')
+    expect(parseDrillUrl('?ch=type').channel).toBe('type')
+    expect(parseDrillUrl('?ch=speak').channel).toBe('speak')
   })
 
   it('题库按声明顺序规范化，而不是用户输入的顺序', () => {
@@ -79,16 +92,18 @@ describe('toSearch', () => {
   it('只输出与默认值不同的项', () => {
     expect(toSearch({ ...DEFAULT_DRILL_URL, choiceSize: 6 })).toBe('?n=6')
     expect(toSearch({ ...DEFAULT_DRILL_URL, sprintSeconds: 0 })).toBe('?sprint=0')
+    expect(toSearch({ ...DEFAULT_DRILL_URL, channel: 'type' })).toBe('?ch=type')
   })
 })
 
 describe('往返一致性', () => {
   const cases: DrillUrl[] = [
     DEFAULT_DRILL_URL,
-    { sets: ['dakuon'], script: 'katakana', choiceSize: 2, sprintSeconds: 0 },
+    { sets: ['dakuon'], script: 'katakana', channel: 'type', choiceSize: 2, sprintSeconds: 0 },
     {
       sets: ['seion', 'handakuon', 'youon'],
       script: 'both',
+      channel: 'speak',
       choiceSize: 8,
       sprintSeconds: 120,
     },

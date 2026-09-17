@@ -44,29 +44,56 @@ export const POOL: KanaItem[] = [
 
 const asKana = (item: Item) => item as KanaItem
 
-/** 看字形 → 读 romaji。感知等价类 = 字形，所以每项独立作答。 */
+/** 三个 drill 共用的答案语义：看字形，答 romaji。 */
+const KANA_ANSWER_SOURCE = {
+  percept: (item: Item) => asKana(item).kana,
+  expectOf: (item: Item) => asKana(item).romaji,
+  acceptOf: (item: Item) => asKana(item).aliases ?? [],
+  labelOf: (item: Item) => asKana(item).romaji,
+}
+
+/** 看字形 → 点选读音。速度指标全部有效。 */
 export const RECOGNITION: DrillSpec = {
   id: 'kana-recognition',
   modality: 'visual',
-  percept: (item) => asKana(item).kana,
-  expectOf: (item) => asKana(item).romaji,
-  acceptOf: (item) => asKana(item).aliases ?? [],
-  labelOf: (item) => asKana(item).romaji,
+  channel: 'tap',
   choiceSize: 4,
+  ...KANA_ANSWER_SOURCE,
+}
+
+/** 看字形 → 打出 romaji。产出方向；RT 无效但吞吐有效。 */
+export const TYPING: DrillSpec = {
+  id: 'kana-typing',
+  modality: 'visual',
+  channel: 'type',
+  choiceSize: 0,
+  ...KANA_ANSWER_SOURCE,
+}
+
+/** 看字形 → 读出来 → 自评。产出方向；只有自评准确率。 */
+export const SPEAKING: DrillSpec = {
+  id: 'kana-speaking',
+  modality: 'visual',
+  channel: 'speak',
+  choiceSize: 0,
+  ...KANA_ANSWER_SOURCE,
 }
 
 /** 听读音 → 写假名。感知等价类 = 读音，所以 あ/ア、じ/ぢ 互不可区分。 */
 export const DICTATION: DrillSpec = {
   id: 'kana-dictation',
   modality: 'audio',
+  channel: 'tap',
+  choiceSize: 4,
   percept: (item) => asKana(item).romaji,
   expectOf: (item) => asKana(item).kana,
   acceptOf: (item) => asKana(item).aliases ?? [],
   labelOf: (item) => asKana(item).kana,
-  choiceSize: 4,
 }
 
-export const SPECS: DrillSpec[] = [RECOGNITION, DICTATION]
+/** 选项集相关的不变量只在有选项集的通道上有意义。 */
+export const CHOICE_SPECS: DrillSpec[] = [RECOGNITION, DICTATION]
+export const ALL_SPECS: DrillSpec[] = [RECOGNITION, TYPING, SPEAKING, DICTATION]
 
 export function itemById(id: string): KanaItem {
   const found = POOL.find((item) => item.id === id)

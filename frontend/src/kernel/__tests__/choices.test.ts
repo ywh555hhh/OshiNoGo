@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { buildChoiceSet } from '../choices'
 import { buildAnswerIndex, grade } from '../grading'
-import { DICTATION, POOL, RECOGNITION, SPECS, itemById, type KanaItem } from './fixtures'
+import { CHOICE_SPECS, DICTATION, POOL, RECOGNITION, itemById, type KanaItem } from './fixtures'
 
 describe('选项集 —— 不变量', () => {
-  it('每一个 drill、每一个 item：按钮标记与判分结论必须完全一致', () => {
-    for (const spec of SPECS) {
+  it('每一个带选项集的 drill、每一个 item：按钮标记与判分结论必须完全一致', () => {
+    for (const spec of CHOICE_SPECS) {
       const index = buildAnswerIndex(POOL, spec)
 
       for (const target of POOL) {
@@ -44,7 +44,7 @@ describe('选项集 —— 不变量', () => {
   })
 
   it('不允许出现两个字面相同的按钮', () => {
-    for (const spec of SPECS) {
+    for (const spec of CHOICE_SPECS) {
       const index = buildAnswerIndex(POOL, spec)
 
       for (const target of POOL) {

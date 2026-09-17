@@ -18,6 +18,7 @@ function trial(itemId: string, ok: boolean, rt = 500, reason?: GradeReason): Tri
     response: ok ? 'x' : 'y',
     ok,
     reason: reason ?? (ok ? 'correct' : 'wrong'),
+    channel: 'tap',
   }
 }
 

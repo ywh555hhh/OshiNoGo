@@ -5,6 +5,7 @@ import {
   createSession,
   deriveSummary,
   step,
+  type ResponseChannel,
   type SessionConfig,
   type SessionEvent,
   type SessionState,
@@ -16,13 +17,14 @@ import {
  * 冲刺到点后再给一点宽限，让「飞行中的那一题」有机会被答完。
  *
  * kernel 的规则是「冲刺在飞行中那一题答完之后才结束」。如果 UI 一到点就
- * 硬停，就会把用户正在做的那一题切掉；给宽限之后，用户答完 → kernel 自然收尾，
+ * 硬停，就会把用户正在做的那题切掉；给宽限之后，用户答完 → kernel 自然收尾，
  * 没答 → UI 才 stop。两条路径都不会丢已经在做的题。
  */
 const SPRINT_GRACE_MS = 2000
 const CLOCK_TICK_MS = 100
 
 export interface DrillSession {
+  channel: ResponseChannel
   phase: SessionState['phase']
   current: SessionState['current']
   options: SessionState['options']
@@ -31,13 +33,18 @@ export interface DrillSession {
   summary: SessionSummary
   remainingMs: number | null
   elapsedMs: number
+  /** tap 通道 */
   answer: (choiceId: string) => void
+  /** type 通道 */
+  submitText: (text: string) => void
+  /** speak 通道 */
+  selfReport: (ok: boolean) => void
   skip: () => void
   stop: () => void
 }
 
 /**
- * kernel 的 React 绑定。这里只做三件 kernel 不能做的事：
+ * kernel 的 React 绑定。这里只做 kernel 不能做的事：
  * DOM 时钟、requestAnimationFrame、把事件转发给纯 reducer。
  * 所有状态与规则都在 kernel 里，所以「切 Tab 丢进度」这类问题不存在——
  * 状态是数据，不是组件树。
@@ -46,6 +53,7 @@ export function useDrillSession(
   config: SessionConfig,
   onFinish: (state: SessionState) => void,
 ): DrillSession {
+  const channel = config.spec.channel
   const index = useMemo(() => createAnswerIndex(config), [config])
   const reducer = useCallback(
     (state: SessionState, event: SessionEvent) => step(state, event, config, index),
@@ -58,7 +66,7 @@ export function useDrillSession(
 
   // 先解构：让下面每个 effect 的依赖都是普通局部变量，
   // 而不是 state.xxx 这种每次都被 lint 追问的写法。
-  const { phase, current, currentOnset, startedAt } = state
+  const { phase, current, currentOnset, startedAt, options } = state
 
   useEffect(() => {
     dispatch({ type: 'start', at: performance.now() })
@@ -129,6 +137,14 @@ export function useDrillSession(
     dispatch({ type: 'choose', at: performance.now(), choiceId })
   }, [])
 
+  const submitText = useCallback((text: string) => {
+    dispatch({ type: 'submitText', at: performance.now(), text })
+  }, [])
+
+  const selfReport = useCallback((ok: boolean) => {
+    dispatch({ type: 'selfReport', at: performance.now(), ok })
+  }, [])
+
   const skip = useCallback(() => {
     dispatch({ type: 'skip', at: performance.now() })
   }, [])
@@ -144,19 +160,25 @@ export function useDrillSession(
         return
       }
 
+      if (event.key === 'Escape') {
+        stop()
+        return
+      }
+
+      // 数字键与空格只属于 tap 通道。
+      // 在 type 通道里吞掉空格会把 romaji 输入打成两截。
+      if (channel !== 'tap') {
+        return
+      }
+
       if (event.key === ' ') {
         event.preventDefault()
         skip()
         return
       }
 
-      if (event.key === 'Escape') {
-        stop()
-        return
-      }
-
-      const index_ = Number(event.key) - 1
-      const choice = state.options[index_]
+      const position = Number(event.key) - 1
+      const choice = options[position]
       if (choice) {
         event.preventDefault()
         answer(choice.id)
@@ -165,18 +187,21 @@ export function useDrillSession(
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [answer, skip, state.options, stop])
+  }, [answer, channel, options, skip, stop])
 
   return {
-    phase: state.phase,
-    current: state.current,
-    options: state.options,
+    channel,
+    phase,
+    current,
+    options,
     answeredCount: state.events.length,
     lastEvent: state.events.length ? state.events[state.events.length - 1] : null,
     summary,
     remainingMs,
     elapsedMs,
     answer,
+    submitText,
+    selfReport,
     skip,
     stop,
   }

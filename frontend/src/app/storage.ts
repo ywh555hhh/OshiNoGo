@@ -1,4 +1,4 @@
-import { ARCHIVE_VERSION, summarize, type Archive, type ArchivedSession } from '@/kernel'
+import { ARCHIVE_VERSION, summarize, type Archive, type ArchivedSession, type ResponseChannel } from '@/kernel'
 import { deserializeArchive, serializeArchive } from '@/kernel'
 
 export type ThemePreference = 'light' | 'dark' | 'system'
@@ -112,20 +112,42 @@ export interface TrendPoint {
   icpm: number
   accuracy: number
   at: number
+  /** 这一组的准确率是不是自评来的。 */
+  selfReported: boolean
 }
 
-export function buildTrend(archive: Archive, limit = 12): TrendPoint[] {
+/**
+ * 趋势。
+ *
+ * **必须按通道过滤**：不同通道的 ICPM 不可比（打字的每试次恒定开销
+ * 与点按不是一个量级）。把 tap 和 type 的点画在同一条柱状图上，
+ * 看着像「变慢了」，其实只是换了通道。
+ */
+export function buildTrend(
+  archive: Archive,
+  channel: ResponseChannel,
+  limit = 12,
+): TrendPoint[] {
   return archive.sessions
-    .map((session) => {
-      const metrics = summarize(session.events, { durationMs: session.durationMs })
-      return {
-        icpm: metrics.icpm,
-        accuracy: metrics.accuracy,
-        at: session.startedAt,
-        sufficient: metrics.sufficient,
+    .filter((session) => session.channel === channel)
+    .flatMap((session) => {
+      const metrics = summarize(session.events, {
+        durationMs: session.durationMs,
+        channel,
+      })
+
+      if (!metrics.sufficient) {
+        return []
       }
+
+      return [
+        {
+          icpm: metrics.icpm,
+          accuracy: metrics.accuracy,
+          at: session.startedAt,
+          selfReported: metrics.accuracyIsSelfReported,
+        },
+      ]
     })
-    .filter((point) => point.sufficient)
     .slice(-limit)
-    .map(({ icpm, accuracy, at }) => ({ icpm, accuracy, at }))
 }
