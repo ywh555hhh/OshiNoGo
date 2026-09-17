@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+
+# Node / 前端产物（原先只在 frontend/.gitignore 里，根目录跑任何工具都会被误提交）
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+npm-debug.log*

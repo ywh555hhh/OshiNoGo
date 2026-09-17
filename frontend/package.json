@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "build:pages": "tsc -b && VITE_PUBLIC_BASE=/OshiNoGo/ vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "tsc -b && eslint . && vitest run"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -44,6 +47,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vitest": "^3.2.7"
   }
 }
