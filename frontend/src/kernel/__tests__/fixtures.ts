@@ -31,7 +31,15 @@ export const POOL: KanaItem[] = [
   },
   { id: 'ji-hira', prompt: 'じ', kana: 'じ', romaji: 'ji', meaning: '' },
   { id: 'ji-daku', prompt: 'ぢ', kana: 'ぢ', romaji: 'ji', meaning: '' },
-  { id: 'wo-hira', prompt: 'を', kana: 'を', romaji: 'wo', meaning: '' },
+  {
+    id: 'wo-hira',
+    prompt: 'を',
+    kana: 'を',
+    romaji: 'wo',
+    meaning: '',
+    aliases: ['o'],
+  },
+  { id: 'n-hira', prompt: 'ん', kana: 'ん', romaji: 'n', meaning: '', aliases: ['nn'] },
 ]
 
 const asKana = (item: Item) => item as KanaItem

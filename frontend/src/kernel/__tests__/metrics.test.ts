@@ -6,6 +6,7 @@ import {
   MIN_TRIALS_FOR_TREND,
   celeration,
   coefficientOfVariation,
+  mean,
   median,
   stdev,
   summarize,
@@ -39,6 +40,13 @@ describe('median', () => {
   it('不受长尾拖累 —— 这正是不能再用 mean 的原因', () => {
     const withOutlier = [400, 420, 450, 460, 8000]
     expect(median(withOutlier)).toBe(450)
+  })
+
+  it('mean 会被一个走神样本拉爆 —— 所以它不再出现在任何指标里', () => {
+    const withOutlier = [400, 420, 450, 460, 8000]
+    expect(mean(withOutlier)).toBeGreaterThan(median(withOutlier) as number)
+    expect(mean(withOutlier)).toBeCloseTo(1946, 0)
+    expect(mean([])).toBe(0)
   })
 })
 

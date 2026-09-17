@@ -7,21 +7,15 @@
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 222 89% 60%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217 33% 93%;
-  --secondary-foreground: 222 47% 11%;
   --muted: 214 32% 91%;
   --muted-foreground: 215 16% 40%;
   --accent: 332 80% 92%;
   --accent-foreground: 336 70% 30%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 210 40% 98%;
   --border: 214 20% 84%;
   --input: 214 20% 84%;
   --ring: 222 89% 60%;
+  --right: 152 60% 36%;
+  --wrong: 350 74% 48%;
   --radius: 1rem;
 }
 
@@ -30,21 +24,15 @@
   --foreground: 210 40% 96%;
   --card: 222 44% 10%;
   --card-foreground: 210 40% 96%;
-  --popover: 222 44% 10%;
-  --popover-foreground: 210 40% 96%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
-  --secondary: 217 32% 17%;
-  --secondary-foreground: 210 40% 96%;
   --muted: 217 32% 17%;
   --muted-foreground: 215 20% 72%;
   --accent: 334 63% 19%;
   --accent-foreground: 340 100% 92%;
-  --destructive: 0 63% 45%;
-  --destructive-foreground: 210 40% 98%;
   --border: 217 24% 20%;
   --input: 217 24% 20%;
   --ring: 217 91% 60%;
+  --right: 152 55% 52%;
+  --wrong: 350 80% 62%;
 }
 
 @layer base {
@@ -52,26 +40,60 @@
     @apply border-border;
   }
 
-  html {
-    @apply scroll-smooth;
+  html,
+  body {
+    height: 100%;
+    /* 微信内置浏览器会带着弹跳滚动进来，它会污染点按手感 */
+    overscroll-behavior: none;
   }
 
   body {
-    @apply min-h-screen bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at top, rgba(59, 130, 246, 0.12), transparent 30%),
-      radial-gradient(circle at 85% 15%, rgba(236, 72, 153, 0.1), transparent 22%);
+    @apply bg-background text-foreground antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
   }
 
-  button,
-  input,
-  textarea {
-    @apply outline-none;
+  button {
+    /* 干掉双击缩放与 300ms 点击延迟；长按别触发文本选择 */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /*
+   * 100dvh 在微信 X5/XWeb 的旧内核里没有，回退到 100vh。
+   * 直接用 Tailwind 的 h-dvh 会在旧机上失效，所以自己写两层。
+   */
+  .screen-dvh {
+    height: 100vh;
+    height: 100dvh;
   }
+}
+
+/*
+ * 正误回闪。
+ *
+ * 关键帧放在 CSS 而不是 Tailwind config 里：只需要两个类，
+ * 没必要为此增加配置面。元素用 key={已答题数} 重挂载来重放动画，
+ * 所以不需要任何定时器状态。
+ */
+@keyframes flash-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.flash-right {
+  background-color: hsl(var(--right) / 0.22);
+  animation: flash-fade 260ms ease-out forwards;
+}
+
+.flash-wrong {
+  background-color: hsl(var(--wrong) / 0.26);
+  animation: flash-fade 260ms ease-out forwards;
 }

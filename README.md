@@ -1,121 +1,134 @@
 # OshiNoGo
 
 <p align="center">
-  <img src="./frontend/logo.svg" alt="OshiNoGo logo" width="360" />
+  <img src="./frontend/logo.svg" alt="OshiNoGo logo" width="300" />
 </p>
 
-<p align="center">
-  一个以《我推的孩子》梗味做点缀的五十音训练器：主打 <strong>recognition / dictation / words</strong> 三种模式，帮助你把假名识别、听写和整词拼读练成更稳定的条件反射。
-</p>
+**用一个能被信任的计时器，把「看到假名 → 立刻反应」这一件事练到自动化。**
 
-<p align="center">
-  <a href="https://ywh555hhh.github.io/OshiNoGo/">GitHub Pages</a>
-</p>
+不是课程，不是教材，不是 SRS 平台。是一个**测量仪 + 调度器**。
 
-## 三种模式
+线上：<https://ywh555hhh.github.io/OshiNoGo/>
 
-- **recognition**：看单个假名，立刻输入 romaji。
-- **dictation**：听到发音，立刻写出对应假名。
-- **words**：看纯平假名单词，先尝试自己读，再播放和对照答案。
+---
 
-推荐顺序：**recognition → dictation → words**。
+## 它只做一件事
 
-## 技术结构
+屏幕中央给一个假名，下方四个读音按钮，点按即提交。
 
-- 前端：`frontend/` 下的 Vite + React + TypeScript + Tailwind
-- 后端：`app/main.py`，只负责托管前端静态资源
-- 数据持久化：浏览器本地 `localStorage`
-- 语音能力：浏览器原生 `speechSynthesis`
+- **一屏一题，不滚动**，选项在拇指区
+- **没有确认按钮** —— 点按即提交，零点按推进
+- **主指标只有一个**：`个/分`（每分钟正确数，ICPM）+ 正确率
+- 练完一组给中位反应、稳定性 CV、以及最近若干组的趋势
 
-## 本地运行
+手机（微信 / QQ 内置浏览器）是**第一环境**，桌面是附赠。
 
-### 1) 前端开发模式
+---
+
+## 为什么是点按，不是打字
+
+不是「手机上也能用」，而是**作答通道决定了数据能不能用**：
+
+| 作答方式 | 能否计时 | 原因 |
+| --- | --- | --- |
+| 手指点按固定按钮 | ✅ | `pointerdown` 延迟只有触摸采样量级（8–30 ms） |
+| 物理键盘 | ✅ | 延迟 < 5 ms |
+| 软键盘 / 输入法文本输入 | ❌ | 字符 commit 延迟 50–150 ms（联想、组词、纠错），会污染整个数据集 |
+
+所以文本输入**不作为作答通道**。顺带买到三件事：
+
+1. **固定选项数 N 之后，RT 跨题库可比** —— Hick's law 的 `log₂(n)` 项被消掉，
+   5 个母音池和 46 个清音池的反应时间终于是同一个物理量。
+2. **识别与拼写解耦** —— 不再混入「romaji 会不会拼」这个无关能力。
+3. **同音歧义在结构上不可表达** —— 选项集按「感知等价类互不相同」构建，
+   じ/ぢ、あ/ア 这种题目根本无法生成，不需要用提示文案去道歉。
+
+---
+
+## 指标
+
+主指标是 **ICPM（每分钟正确数）**。它取代了原来的「平均反应 ms」，因为：
+
+- RT 的均值会被一个 8 秒的走神拉爆；ICPM 对单题离群值免疫
+- 「正确率 98% @ 50 题」在统计上毫无意义（错 1 题就是 98%）
+
+详情里还有两个诊断指标：
+
+- **中位反应**（不用均值：RT 分布右偏）
+- **稳定性 CV = sd/mean** —— 这是区分「变快」和「自动化」的唯一指标：
+  真正的自动化表现为 CV 下降，而不只是均值下降
+  （Segalowitz & Segalowitz, 1993；注意该证据在单词识别层较强、句子层有反驳，所以只作第二指标）
+
+样本少于 30 题时不给结论，直接显示「样本不足」。抢答（<150 ms）和走神（>5000 ms）
+会被排除并**把条数摆出来**，不静默丢弃。
+
+---
+
+## URL 即配置
+
+没有设置面板挡在训练前面。一个 drill 就是一个可分享、可收藏的链接：
+
+| 参数 | 取值 | 默认 |
+| --- | --- | --- |
+| `set` | `seion` / `dakuon` / `handakuon` / `youon`（逗号分隔） | `seion` |
+| `script` | `hiragana` / `katakana` / `both` | `hiragana` |
+| `n` | 选项数 2–8 | `4` |
+| `sprint` | 秒数 0–600（`0` = 不限时） | `60` |
+
+例：`?set=dakuon,youon&script=both&n=6&sprint=30`
+
+坏值会被夹紧或回退到默认值，不会白屏 —— 分享链接被手改坏也应该还能用。
+
+---
+
+## 本地开发
+
+需要 Node `^20.19 || ^22.13 || >=24`（Vite 8 不支持 21/23 这类奇数版本）。
 
 ```bash
 npm install --prefix frontend
-npm run dev --prefix frontend
+npm run dev --prefix frontend            # 开发
+npm run verify --prefix frontend         # 类型 + lint + 测试（提交前跑这个）
+npm run build:pages --prefix frontend     # 产出 dist/（Pages 用 /OshiNoGo/ 作为 base）
 ```
 
-### 2) 前端构建
+部署：push 到 `master` 即由 `.github/workflows/deploy-pages.yml` 自动发布，
+发布前会先跑一遍 `verify` 作为门禁。
 
-```bash
-npm run build --prefix frontend
+---
+
+## 目录
+
+```text
+frontend/src/
+  kernel/        纯 TS：判分 / 指标 / 调度 / 状态机 / 档案。零依赖、零 DOM、零 React
+    __tests__/   108 个测试里的大部分；purity.test.ts 是架构守卫
+  drills/kana/   数据包：假名数据 + 识别 drill 的 spec
+  app/           React 绑定：URL 配置、档案存储、一屏一题、结果卡
 ```
 
-### 3) FastAPI 托管前端
+架构契约见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)。三条铁律：
+- **R0** 手机是第一上帝（微信 / QQ 内置浏览器是一等环境）
+- **R1** 作答通道决定能不能测（onset 不可知，就不测）
+- **R2** 事件日志是唯一真相（状态是数据，不是组件树）
+- **R3** kernel 不知道「假名」是什么（加 drill = 加数据包，不是加工程）
 
-```bash
-uv run python -m app.main
-```
+---
 
-默认会启动在 `http://127.0.0.1:8000`。
+## 现在没有的东西（以及为什么）
 
-## GitHub Pages 部署
+| 没有 | 原因 |
+| --- | --- |
+| 听写（音 → 形） | 浏览器 `speechSynthesis` 的 onset 不可知，**测不准就不能测**。回来后必须配预渲染音频 + Web Audio 排程，届时才谈得上计时。 |
+| 整词 / 片假名迁移测试 | 需要一个能验证「练的不是这 46 张图」的 transfer drill，是独立的一步。 |
+| 账号 / 云同步 | 档案是本地优先 + 可导出/导入 JSON 文件（导出文件就是事件日志本身）。 |
+| 后端 | 纯静态 SPA，不需要服务端。 |
+| 训练报告弹窗 | 一排趋势柱 + 五个数字就够。 |
 
-仓库当前 GitHub Pages 地址：
-
-- `https://ywh555hhh.github.io/OshiNoGo/`
-
-用于 Pages 的构建命令：
-
-```bash
-npm run build:pages --prefix frontend
-```
-
-这个命令会自动使用 `/OshiNoGo/` 作为 Vite `base`，避免资源路径在 Pages 下失效。
-
-## 托管行为
-
-FastAPI 当前提供：
-
-- `/`：返回前端首页
-- `/healthz`：健康检查
-- `/assets/*`：前端构建产物
-- 其他前端路径：走 SPA fallback，回到 `index.html`
-- `frontend/dist` 不完整时：自动回退到旧 `static/` 页面
-
-## 浏览器与语音支持
-
-推荐使用：
-
-- 最新版 Chrome / Edge / Safari
-- 已安装系统日语语音包的环境
-
-说明：
-
-- `dictation` 和 `words` 依赖浏览器原生 `speechSynthesis`
-- 不同浏览器、系统语音包、设备上的效果可能不同
-- 页面会区分 `ready / limited / unsupported` 三档语音状态并给出提示
-- 如果语音不可用，建议优先使用 `recognition`
-
-## 本地保存边界
-
-以下数据会保存在当前浏览器：
-
-- 主题
-- 上次打开的训练模式
-- onboarding 完成状态
-- recognition / dictation 的题库偏好、文字种类、题量
-- recognition / dictation 的累计统计与最近一次训练摘要
-- words 的累计练习次数
-
-不会保存：
-
-- 无限增长的历史日志
-- 跨设备同步数据
-- 账号信息
+---
 
 ## 已知限制
 
-- 没有账号系统、云同步、数据库或服务端 TTS
-- 语音质量完全受浏览器和系统语音包影响
-- `words` 仍是轻量训练模式，不是完整考试系统
-- 本地 `localStorage` 被清理后，偏好和累计统计会一并丢失
-
-## 验证命令
-
-```bash
-npm run lint --prefix frontend
-npm run build --prefix frontend
-uv run python -c "import app.main; print('ok')"
-```
+- 事件日志保留最近 30 组（有上限，不是无界日志）
+- 清空浏览器数据会丢档案 —— 请用「导出档案」
+- 微信内置浏览器会回收后台页面，所以进度即时落盘

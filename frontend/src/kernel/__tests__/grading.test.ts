@@ -56,6 +56,16 @@ describe('grade —— 视觉认读', () => {
   it('真错的输入是 wrong', () => {
     expect(gradeWith('ka-hira', 'sa').reason).toBe('wrong')
   })
+
+  it('を 的两种常见拼法都算对（wo / o）', () => {
+    expect(gradeWith('wo-hira', 'wo').ok).toBe(true)
+    expect(gradeWith('wo-hira', 'o').ok).toBe(true)
+  })
+
+  it('ん 接受 n 与 nn', () => {
+    expect(gradeWith('n-hira', 'n').ok).toBe(true)
+    expect(gradeWith('n-hira', 'nn').ok).toBe(true)
+  })
 })
 
 describe('grade —— 听觉听写（同音歧义）', () => {

@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # workflow 里的 action 是 pin 到 commit SHA 的。没有这一节，
+  # pin 就只是把 action 永久冻在老版本 —— 两者必须配套。
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
