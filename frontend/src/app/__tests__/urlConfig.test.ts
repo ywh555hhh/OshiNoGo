@@ -59,9 +59,7 @@ describe('parseDrillUrl', () => {
       CHOICE_SIZE_RANGE.max,
     )
     expect(parseDrillUrl('?n=0').choiceSize).toBe(CHOICE_SIZE_RANGE.min)
-    expect(parseDrillUrl(`?sprint=${SPRINT_RANGE.max + 1000}`).sprintSeconds).toBe(
-      SPRINT_RANGE.max,
-    )
+    expect(parseDrillUrl(`?sprint=${SPRINT_RANGE.max + 1000}`).sprintSeconds).toBe(SPRINT_RANGE.max)
     expect(parseDrillUrl('?sprint=-5').sprintSeconds).toBe(SPRINT_RANGE.min)
   })
 

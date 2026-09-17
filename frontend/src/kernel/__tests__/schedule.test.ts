@@ -54,8 +54,12 @@ describe('findRequeuable —— 组内错误回插', () => {
       trial('B', true),
     ]
     // A 已出现 2 次，reservices = 1，maxRequeues = 1 时用尽
-    expect(findRequeuable(POOL, events, { ...DEFAULT_SCHEDULE, requeueLag: 2, maxRequeues: 1 })).toBeNull()
-    expect(findRequeuable(POOL, events, { ...DEFAULT_SCHEDULE, requeueLag: 2, maxRequeues: 2 })?.id).toBe('A')
+    expect(
+      findRequeuable(POOL, events, { ...DEFAULT_SCHEDULE, requeueLag: 2, maxRequeues: 1 }),
+    ).toBeNull()
+    expect(
+      findRequeuable(POOL, events, { ...DEFAULT_SCHEDULE, requeueLag: 2, maxRequeues: 2 })?.id,
+    ).toBe('A')
   })
 
   it('刚出过的题不回插（否则变成连续重复）', () => {
@@ -70,11 +74,7 @@ describe('findRequeuable —— 组内错误回插', () => {
   })
 
   it('跳过的题同样会被回插', () => {
-    const events = [
-      trial('A', false, 0, 'skipped'),
-      trial('B', true),
-      trial('B', true),
-    ]
+    const events = [trial('A', false, 0, 'skipped'), trial('B', true), trial('B', true)]
     expect(findRequeuable(POOL, events, { ...DEFAULT_SCHEDULE, requeueLag: 2 })?.id).toBe('A')
   })
 

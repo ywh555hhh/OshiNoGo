@@ -1,4 +1,10 @@
-import { ARCHIVE_VERSION, summarize, type Archive, type ArchivedSession, type ResponseChannel } from '@/kernel'
+import {
+  ARCHIVE_VERSION,
+  summarize,
+  type Archive,
+  type ArchivedSession,
+  type ResponseChannel,
+} from '@/kernel'
 import { deserializeArchive, serializeArchive } from '@/kernel'
 
 export type ThemePreference = 'light' | 'dark' | 'system'
@@ -123,11 +129,7 @@ export interface TrendPoint {
  * 与点按不是一个量级）。把 tap 和 type 的点画在同一条柱状图上，
  * 看着像「变慢了」，其实只是换了通道。
  */
-export function buildTrend(
-  archive: Archive,
-  channel: ResponseChannel,
-  limit = 12,
-): TrendPoint[] {
+export function buildTrend(archive: Archive, channel: ResponseChannel, limit = 12): TrendPoint[] {
   return archive.sessions
     .filter((session) => session.channel === channel)
     .flatMap((session) => {

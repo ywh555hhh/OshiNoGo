@@ -127,11 +127,9 @@ export function useDrillSession(
 
   const summary = useMemo(() => deriveSummary(state, clock, config), [state, clock, config])
 
-  const elapsedMs =
-    startedAt === null ? 0 : Math.max(0, (state.endedAt ?? clock) - startedAt)
+  const elapsedMs = startedAt === null ? 0 : Math.max(0, (state.endedAt ?? clock) - startedAt)
 
-  const remainingMs =
-    config.durationMs === null ? null : Math.max(0, config.durationMs - elapsedMs)
+  const remainingMs = config.durationMs === null ? null : Math.max(0, config.durationMs - elapsedMs)
 
   const answer = useCallback((choiceId: string) => {
     dispatch({ type: 'choose', at: performance.now(), choiceId })

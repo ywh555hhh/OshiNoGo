@@ -56,9 +56,11 @@ export function ResultCard({ summary, trend, extra, onRestart }: ResultCardProps
           <Cell label="题数" value={`${summary.attempts}`} />
           <Cell
             label="中位反应"
-            value={support.reactionTime && summary.medianRt !== null
-              ? `${Math.round(summary.medianRt)} ms`
-              : '—'}
+            value={
+              support.reactionTime && summary.medianRt !== null
+                ? `${Math.round(summary.medianRt)} ms`
+                : '—'
+            }
           />
           <Cell
             label="稳定性 CV"
@@ -79,8 +81,8 @@ export function ResultCard({ summary, trend, extra, onRestart }: ResultCardProps
             这个通道不测反应时间：
             {summary.channel === 'type'
               ? '软键盘与输入法的延迟（50–150ms）远大于我们要测的东西，测出来的会是输入法而不是假名。'
-              : '没有可靠的自动判分手段，所以正确率是你自己判的。'}
-            {' '}但「个/分」依然有效——它只受每题的恒定开销影响，不影响通道内的趋势比较。
+              : '没有可靠的自动判分手段，所以正确率是你自己判的。'}{' '}
+            但「个/分」依然有效——它只受每题的恒定开销影响，不影响通道内的趋势比较。
           </p>
         )}
 

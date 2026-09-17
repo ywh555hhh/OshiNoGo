@@ -16,9 +16,7 @@ export function median(values: readonly number[]): number | null {
   const sorted = [...values].sort((left, right) => left - right)
   const middle = sorted.length >> 1
 
-  return sorted.length % 2 === 1
-    ? sorted[middle]
-    : (sorted[middle - 1] + sorted[middle]) / 2
+  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
 }
 
 export function mean(values: readonly number[]): number {
@@ -36,8 +34,7 @@ export function stdev(values: readonly number[]): number {
   }
 
   const average = mean(values)
-  const variance =
-    values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length
+  const variance = values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length
 
   return Math.sqrt(variance)
 }
@@ -198,9 +195,7 @@ export function summarize(
 
   const durationMs = options.durationMs ?? inferDuration(scoped)
 
-  const channels = [...tallies.values()].sort(
-    (left, right) => right.attempts - left.attempts,
-  )
+  const channels = [...tallies.values()].sort((left, right) => right.attempts - left.attempts)
 
   return {
     attempts,

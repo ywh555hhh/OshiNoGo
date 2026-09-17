@@ -120,7 +120,14 @@ describe('档案 —— v1 → v2 迁移（通道是 v2 才引入的）', () => 
         endedAt: 2000,
         durationMs: 1000,
         events: [
-          { itemId: 'a-hira', tOnset: 1000, tResponse: 1400, response: 'a', ok: true, reason: 'correct' },
+          {
+            itemId: 'a-hira',
+            tOnset: 1000,
+            tResponse: 1400,
+            response: 'a',
+            ok: true,
+            reason: 'correct',
+          },
         ],
       },
     ],

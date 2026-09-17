@@ -26,10 +26,7 @@ function config(overrides: Partial<SessionConfig> = {}): SessionConfig {
 
 function run(config_: SessionConfig, events: SessionEvent[]): SessionState {
   const index = createAnswerIndex(config_)
-  return events.reduce(
-    (state, event) => step(state, event, config_, index),
-    createSession(config_),
-  )
+  return events.reduce((state, event) => step(state, event, config_, index), createSession(config_))
 }
 
 describe('type 通道', () => {
@@ -129,12 +126,7 @@ describe('speak 通道', () => {
 
     for (let round = 0; round < 3; round += 1) {
       state = step(state, { type: 'present', at: round * 1000 }, settings, index)
-      state = step(
-        state,
-        { type: 'selfReport', at: round * 1000 + 900, ok: true },
-        settings,
-        index,
-      )
+      state = step(state, { type: 'selfReport', at: round * 1000 + 900, ok: true }, settings, index)
     }
 
     const summary = deriveSummary(state, 3000, settings)

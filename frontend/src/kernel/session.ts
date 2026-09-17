@@ -1,10 +1,5 @@
 import { buildChoiceSet, type Choice, type ChoiceSource } from './choices'
-import {
-  buildAnswerIndex,
-  grade,
-  type AnswerIndex,
-  type AnswerKeySource,
-} from './grading'
+import { buildAnswerIndex, grade, type AnswerIndex, type AnswerKeySource } from './grading'
 import { summarize, type TrialMetrics } from './metrics'
 import { pickNext, type ScheduleConfig } from './schedule'
 import type { GradeReason, Item, Modality, ResponseChannel, TrialEvent } from './types'
@@ -357,5 +352,10 @@ export function deriveSummary(
     channel: config.spec.channel,
   })
 
-  return { ...metrics, elapsedMs, finished: state.phase === 'finished', channel: config.spec.channel }
+  return {
+    ...metrics,
+    elapsedMs,
+    finished: state.phase === 'finished',
+    channel: config.spec.channel,
+  }
 }

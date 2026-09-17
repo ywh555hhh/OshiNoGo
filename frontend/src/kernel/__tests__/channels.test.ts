@@ -86,10 +86,7 @@ describe('summarize —— 自评不进速度统计', () => {
   })
 
   it('自评通道：准确率有，RT 没有', () => {
-    const spoke = [
-      trial('speak', 1200, true, 'self-pass'),
-      trial('speak', 900, false, 'self-fail'),
-    ]
+    const spoke = [trial('speak', 1200, true, 'self-pass'), trial('speak', 900, false, 'self-fail')]
     const metrics = summarize(spoke, { durationMs: 60_000 })
 
     expect(metrics.attempts).toBe(2)
@@ -103,20 +100,14 @@ describe('summarize —— 自评不进速度统计', () => {
   })
 
   it('自评不影响吞吐：它仍然是「这段时间里做对多少」', () => {
-    const spoke = [
-      trial('speak', null, true, 'self-pass'),
-      trial('speak', null, true, 'self-pass'),
-    ]
+    const spoke = [trial('speak', null, true, 'self-pass'), trial('speak', null, true, 'self-pass')]
     expect(summarize(spoke, { durationMs: 60_000 }).icpm).toBeCloseTo(2, 10)
   })
 })
 
 describe('summarize —— 混通道必须可检测', () => {
   it('混了通道就置 mixedChannels，因为这些数不可跨通道比较', () => {
-    const events = [
-      trial('tap', 400, true, 'correct'),
-      trial('speak', null, true, 'self-pass'),
-    ]
+    const events = [trial('tap', 400, true, 'correct'), trial('speak', null, true, 'self-pass')]
     const metrics = summarize(events, { durationMs: 60_000 })
 
     expect(metrics.mixedChannels).toBe(true)
@@ -127,10 +118,7 @@ describe('summarize —— 混通道必须可检测', () => {
   })
 
   it('给了 channel 过滤就没有混通道的风险', () => {
-    const events = [
-      trial('tap', 400, true, 'correct'),
-      trial('speak', null, true, 'self-pass'),
-    ]
+    const events = [trial('tap', 400, true, 'correct'), trial('speak', null, true, 'self-pass')]
 
     const tapOnly = summarize(events, { durationMs: 60_000, channel: 'tap' })
     expect(tapOnly.mixedChannels).toBe(false)

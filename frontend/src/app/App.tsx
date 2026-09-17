@@ -24,13 +24,7 @@ import {
   type StoredState,
 } from './storage'
 import { useTheme } from './theme'
-import {
-  CHANNEL_LABELS,
-  configKey,
-  parseDrillUrl,
-  toSearch,
-  type DrillUrl,
-} from './urlConfig'
+import { CHANNEL_LABELS, configKey, parseDrillUrl, toSearch, type DrillUrl } from './urlConfig'
 
 const SPRINT_OPTIONS = [30, 60, 120, 0] as const
 const CHOICE_OPTIONS = [2, 3, 4, 6] as const

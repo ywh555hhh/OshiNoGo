@@ -29,7 +29,14 @@ interface DrillProps {
  * R0：不滚动、无确认按钮、作答区在拇指区、禁掉浏览器手势干扰。
  * 作答区的形状由通道决定（tap 选项网格 / type 输入框 / speak 自评）。
  */
-export function Drill({ sessionConfig, trend, header, resultExtra, onFinish, onRestart }: DrillProps) {
+export function Drill({
+  sessionConfig,
+  trend,
+  header,
+  resultExtra,
+  onFinish,
+  onRestart,
+}: DrillProps) {
   const handleFinish = useCallback(
     (state: SessionState) => {
       const timed =
@@ -61,9 +68,7 @@ export function Drill({ sessionConfig, trend, header, resultExtra, onFinish, onR
     return item ? sessionConfig.spec.expectOf(item) : null
   }, [lastEvent, sessionConfig])
 
-  const currentExpected = session.current
-    ? sessionConfig.spec.expectOf(session.current)
-    : null
+  const currentExpected = session.current ? sessionConfig.spec.expectOf(session.current) : null
 
   const submitTyped = useCallback(
     (text: string) => {
@@ -124,7 +129,8 @@ export function Drill({ sessionConfig, trend, header, resultExtra, onFinish, onR
             {lastEvent ? (
               lastEvent.ok ? (
                 <span className="text-[hsl(var(--right))]">
-                  ✓{support.reactionTime && lastEvent.tResponse !== null
+                  ✓
+                  {support.reactionTime && lastEvent.tResponse !== null
                     ? ` ${Math.round(lastEvent.tResponse - lastEvent.tOnset)} ms`
                     : ''}
                 </span>
