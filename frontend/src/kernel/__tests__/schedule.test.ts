@@ -119,7 +119,8 @@ describe('weightFor —— 调度的优先级顺序（不依赖具体调参）',
 })
 
 describe('pickNext', () => {
-  it('池子为空 → null，不崩', () => {    expect(pickNext({ pool: [], events: [], config: DEFAULT_SCHEDULE, rngState: 1 })).toBeNull()
+  it('池子为空 → null，不崩', () => {
+    expect(pickNext({ pool: [], events: [], config: DEFAULT_SCHEDULE, rngState: 1 })).toBeNull()
   })
 
   it('同样的种子 + 同样的历史 → 同样的下一题（可重放）', () => {

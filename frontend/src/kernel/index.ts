@@ -1,11 +1,4 @@
-export type {
-  Item,
-  Modality,
-  OnsetSource,
-  ResponseChannel,
-  GradeReason,
-  TrialEvent,
-} from './types'
+export type { Item, Modality, OnsetSource, ResponseChannel, GradeReason, TrialEvent } from './types'
 
 export {
   METRIC_SUPPORT,

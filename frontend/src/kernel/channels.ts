@@ -30,11 +30,7 @@ export const METRIC_SUPPORT: Record<ResponseChannel, MetricSupport> = {
 
 export const RESPONSE_CHANNELS: readonly ResponseChannel[] = ['tap', 'type', 'speak']
 
-export const ONSET_SOURCES: readonly OnsetSource[] = [
-  'paint',
-  'audio-scheduled',
-  'audio-unknown',
-]
+export const ONSET_SOURCES: readonly OnsetSource[] = ['paint', 'audio-scheduled', 'audio-unknown']
 
 export function isSelfReported(reason: GradeReason): boolean {
   return reason === 'self-pass' || reason === 'self-fail'
@@ -55,10 +51,7 @@ export function isMachineGradedChannel(channel: ResponseChannel): boolean {
  * 换成预渲染音频（`audio-scheduled`）后，同一个 drill 无需改任何其它代码
  * 就能拿回速度指标——这是把「暂时做不到」和「结构上做不到」分开的价值。
  */
-export function metricSupportFor(
-  channel: ResponseChannel,
-  onset: OnsetSource,
-): MetricSupport {
+export function metricSupportFor(channel: ResponseChannel, onset: OnsetSource): MetricSupport {
   const base = METRIC_SUPPORT[channel]
 
   if (onset === 'audio-unknown') {

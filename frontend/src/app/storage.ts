@@ -3,7 +3,7 @@ import {
   summarize,
   type Archive,
   type ArchivedSession,
-  type ResponseChannel,
+  type MetricSupport,
 } from '@/kernel'
 import { deserializeArchive, serializeArchive } from '@/kernel'
 
@@ -11,6 +11,8 @@ export type ThemePreference = 'light' | 'dark' | 'system'
 
 export interface StoredState {
   theme: ThemePreference
+  /** 正误音效。手机上课桌前练时一个能立刻关掉的开关很重要。 */
+  sound: boolean
   archive: Archive
 }
 
@@ -31,7 +33,7 @@ function emptyArchive(drillId: string): Archive {
 }
 
 export function defaultState(drillId: string): StoredState {
-  return { theme: 'system', archive: emptyArchive(drillId) }
+  return { theme: 'system', sound: true, archive: emptyArchive(drillId) }
 }
 
 function parseTheme(value: unknown): ThemePreference {
@@ -75,6 +77,7 @@ export function loadState(drillId: string): LoadResult {
     return {
       state: {
         theme: parseTheme(candidate.theme),
+        sound: typeof candidate.sound === 'boolean' ? candidate.sound : true,
         archive: archive ?? emptyArchive(drillId),
       },
       degraded: archive === null,
@@ -125,17 +128,27 @@ export interface TrendPoint {
 /**
  * 趋势。
  *
- * **必须按通道过滤**：不同通道的 ICPM 不可比（打字的每试次恒定开销
- * 与点按不是一个量级）。把 tap 和 type 的点画在同一条柱状图上，
- * 看着像「变慢了」，其实只是换了通道。
+ * **必须按 drill 过滤，而不是按通道**：点选认读与听音选字的作答通道都是 `tap`，
+ * 但刺激完全不同，把两者画在同一条柱状图上等于比较不可比的东西。
  */
-export function buildTrend(archive: Archive, channel: ResponseChannel, limit = 12): TrendPoint[] {
+export function buildTrend(
+  archive: Archive,
+  drillId: string,
+  support: MetricSupport,
+  limit = 12,
+): TrendPoint[] {
+  // 不测吞吐的 drill 没有趋势可言（它的 icpm 恒为 0 且不可比）。
+  // 与其画一排零，不如什么都不画—— UI 会给出解释。
+  if (!support.throughput) {
+    return []
+  }
+
   return archive.sessions
-    .filter((session) => session.channel === channel)
+    .filter((session) => session.drillId === drillId)
     .flatMap((session) => {
       const metrics = summarize(session.events, {
         durationMs: session.durationMs,
-        channel,
+        channel: session.channel,
       })
 
       if (!metrics.sufficient) {

@@ -13,19 +13,30 @@ import { RESPONSE_CHANNELS } from './channels'
 import type { GradeReason, ResponseChannel, TrialEvent } from './types'
 
 /**
- * v1 → v2：v1 只有 tap 一个通道（`ResponseChannel` 是 v2 才引入的概念），
- * 所以 v1 的档案里缺 `channel` 时补 'tap' 不是猜测，而是对 v1 能力的确定性陈述。
- * 这也是唯一一处允许默认填充的地方。
+ * v1 → v2：通道字段是 v2 才引入的。
+ * v2 → v3：drillId 是 v3 才引入的。
+ *
+ * 两处缺失的默认填充都不是猜测，而是对旧版**能力**的确定性陈述：
+ * v1 只实现了 tap；v1/v2 只有一个 drill，所以它的 id 就等于当时的通道名。
+ * 这是仅有的两处允许默认填充的地方。
  */
-export const ARCHIVE_VERSION = 2
+export const ARCHIVE_VERSION = 3
 
-const SUPPORTED_VERSIONS: readonly number[] = [1, 2]
+const SUPPORTED_VERSIONS: readonly number[] = [1, 2, 3]
 
 export interface ArchivedSession {
   startedAt: number
   endedAt: number | null
   durationMs: number | null
-  /** 这一组走的是哪个作答通道。趋势图必须按通道分组，不可混画。 */
+  /**
+   * 这一组是**哪个 drill** 产出的。
+   *
+   * 这是指标的**可比性范围键**，必须比通道更细：
+   * 点选认读和听音选字的作答通道都是 `tap`，但刺激完全不同，
+   * 把两者的个数/分画在同一条趋势上等于比较不可比的东西。
+   */
+  drillId: string
+  /** 作答通道。与每条事件的 channel 必须一致。 */
   channel: ResponseChannel
   events: TrialEvent[]
 }
@@ -122,6 +133,12 @@ function parseSession(value: unknown): ArchivedSession | null {
   if (candidate.channel !== undefined && !isResponseChannel(candidate.channel)) {
     return null
   }
+  if (
+    candidate.drillId !== undefined &&
+    (typeof candidate.drillId !== 'string' || !candidate.drillId)
+  ) {
+    return null
+  }
 
   const events: TrialEvent[] = []
   for (const raw of candidate.events) {
@@ -144,6 +161,9 @@ function parseSession(value: unknown): ArchivedSession | null {
     startedAt: candidate.startedAt,
     endedAt: candidate.endedAt ?? null,
     durationMs: candidate.durationMs ?? null,
+    // v1/v2 只有一个 drill，所以它的 id 就等于当时的通道名。
+    drillId:
+      typeof candidate.drillId === 'string' && candidate.drillId ? candidate.drillId : channel,
     channel,
     events,
   }

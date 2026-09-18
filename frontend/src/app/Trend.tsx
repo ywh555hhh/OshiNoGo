@@ -31,9 +31,9 @@ export function Trend({ points }: { points: readonly TrendPoint[] }) {
       </div>
 
       <div className="flex h-14 items-end gap-1">
-        {points.map((point) => (
+        {points.map((point, index) => (
           <div
-            key={point.at}
+            key={`${point.at}-${index}`}
             title={`${point.icpm.toFixed(1)} 个/分 · ${point.accuracy.toFixed(0)}%`}
             className="flex-1 rounded-t bg-foreground/25"
             style={{ height: `${Math.max(8, (point.icpm / max) * 100)}%` }}

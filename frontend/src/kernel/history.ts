@@ -1,7 +1,14 @@
 import { isSelfReported } from './channels'
 import { median } from './metrics'
 import type { Archive } from './persist'
-import type { ResponseChannel } from './types'
+
+export interface ItemHistory {
+  byItem: ReadonlyMap<string, ItemPrior>
+  /** 参与统计的组数（只计指定 drill）。 */
+  sessions: number
+  /** 参与统计的 trial 数。 */
+  trials: number
+}
 
 /**
  * 跨场次的逐项历史。
@@ -13,6 +20,9 @@ import type { ResponseChannel } from './types'
  * 1. 界面上「易错 / 最慢」榜（用户真正想看的东西）
  * 2. 累计统计（我总共练了多少）
  * 3. **调度器的跨场次先验** —— 让「练」这件事真的发生，而不只是「测」
+ *
+ * 范围键是 **drillId 而不是 channel**：点选认读与听音选字的作答通道都是 `tap`，
+ * 但刺激完全不同，难度也不同。只有同一个 drill 里的历史才是可比的。
  */
 
 /**
@@ -78,19 +88,18 @@ interface Accumulator {
  */
 export function buildItemHistory(
   archive: Archive,
-  channel: ResponseChannel,
+  drillId: string,
   options: HistoryOptions = {},
 ): ItemHistory {
   const graduateAccuracy = options.graduateAccuracy ?? DEFAULT_GRADUATE_ACCURACY
-  const graduateRt =
-    options.graduateRt === undefined ? DEFAULT_GRADUATE_RT : options.graduateRt
+  const graduateRt = options.graduateRt === undefined ? DEFAULT_GRADUATE_RT : options.graduateRt
 
   const accumulators = new Map<string, Accumulator>()
   let sessions = 0
   let trials = 0
 
   for (const session of archive.sessions) {
-    if (session.channel !== channel) {
+    if (session.drillId !== drillId) {
       continue
     }
 
@@ -187,11 +196,11 @@ export interface LifetimeStats {
  */
 export function computeLifetime(
   archive: Archive,
-  channel: ResponseChannel,
+  drillId: string,
   dayKey: (timestamp: number) => string,
   now: number,
 ): LifetimeStats {
-  const history = buildItemHistory(archive, channel)
+  const history = buildItemHistory(archive, drillId)
 
   let trials = 0
   let correct = 0
@@ -200,7 +209,7 @@ export function computeLifetime(
   let lastAt: number | null = null
 
   for (const session of archive.sessions) {
-    if (session.channel !== channel) {
+    if (session.drillId !== drillId) {
       continue
     }
 

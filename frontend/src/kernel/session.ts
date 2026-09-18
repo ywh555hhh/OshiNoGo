@@ -4,14 +4,7 @@ import { buildAnswerIndex, grade, type AnswerIndex, type AnswerKeySource } from 
 import type { ItemPrior } from './history'
 import { summarize, type TrialMetrics } from './metrics'
 import { pickNext, type ScheduleConfig } from './schedule'
-import type {
-  GradeReason,
-  Item,
-  Modality,
-  OnsetSource,
-  ResponseChannel,
-  TrialEvent,
-} from './types'
+import type { GradeReason, Item, Modality, OnsetSource, ResponseChannel, TrialEvent } from './types'
 
 /**
  * 一个 drill 的全部领域知识都在这里，而且只有这些。

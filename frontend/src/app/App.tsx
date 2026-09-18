@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { KANA_SETS, KANA_SET_LABELS, type KanaSet } from '@/drills/kana/kana'
-import { selectPool, speakSpec, tapSpec, typeSpec } from '@/drills/kana/specs'
+import { dictationSpec, selectPool, speakSpec, tapSpec, typeSpec } from '@/drills/kana/specs'
 import {
   DEFAULT_SCHEDULE,
-  RESPONSE_CHANNELS,
+  buildItemHistory,
+  computeLifetime,
+  metricSupportFor,
+  rankSlowest,
+  rankWeakest,
   type ArchivedSession,
   type DrillSpec,
-  type ResponseChannel,
   type SessionConfig,
 } from '@/kernel'
 
 import { cn } from './cn'
 import { Drill } from './Drill'
+import { StatsPanel, type PriorRow, type RecentRow } from './StatsPanel'
+import { localDayKey, wallClockNow } from './clock'
 import { createSeed } from './seed'
 import {
   appendSession,
@@ -24,7 +29,15 @@ import {
   type StoredState,
 } from './storage'
 import { useTheme } from './theme'
-import { CHANNEL_LABELS, configKey, parseDrillUrl, toSearch, type DrillUrl } from './urlConfig'
+import {
+  DRILLS,
+  DRILL_LABELS,
+  hasChoices,
+  parseDrillUrl,
+  toSearch,
+  type DrillId,
+  type DrillUrl,
+} from './urlConfig'
 
 const SPRINT_OPTIONS = [30, 60, 120, 0] as const
 const CHOICE_OPTIONS = [2, 3, 4, 6] as const
@@ -33,16 +46,22 @@ const SCRIPT_OPTIONS = [
   { value: 'katakana', label: '片假名' },
   { value: 'both', label: '混合' },
 ] as const
+const RECENT_LIMIT = 20
 
 const DRILL_ID = 'kana'
 
+/** drill 决定了刺激、作答通道与 onset 来源三者，所以 spec 由它派生。 */
 function specFor(config: DrillUrl): DrillSpec {
-  if (config.channel === 'type') {
+  if (config.drill === 'type') {
     return typeSpec()
   }
 
-  if (config.channel === 'speak') {
+  if (config.drill === 'speak') {
     return speakSpec()
+  }
+
+  if (config.drill === 'listen') {
+    return dictationSpec(config.choiceSize)
   }
 
   return tapSpec(config.choiceSize)
@@ -56,9 +75,8 @@ function App() {
   /**
    * 落盘只在**事件处理器**里发生，不在 effect 里。
    *
-   * 两个原因：
-   * - 在 effect 里 setState 会造成级联渲染；
-   * - 在 effect 里落盘会在挂载时白写一次，还把持久化与渲染时机耦合起来。
+   * 两个原因：在 effect 里 setState 会造成级联渲染；在 effect 里落盘会在挂载时
+   * 白写一次，还把持久化与渲染时机耦合起来。
    *
    * ref 镜像最新的 store，让处理器不必依赖闭包里的旧值，
    * 同时避免「在 setState 的 updater 里做副作用」这个反模式。
@@ -76,6 +94,8 @@ function App() {
   const [config, setConfig] = useState<DrillUrl>(() => parseDrillUrl(window.location.search))
   // seed 就是「这一组」的身份：换一组 = 换 seed，不需要额外的 runId 计数器。
   const [seed, setSeed] = useState(createSeed)
+  // 墙钟只取一次：它只用来算「连续天数」，不需要随渲染跳动。
+  const [nowAtMount] = useState(wallClockNow)
 
   useEffect(() => {
     window.history.replaceState(null, '', `${window.location.pathname}${toSearch(config)}`)
@@ -87,25 +107,114 @@ function App() {
     },
     [commit],
   )
-  const { toggle } = useTheme(store.theme, setTheme)
+  const { toggle: toggleTheme } = useTheme(store.theme, setTheme)
+
+  const toggleSound = useCallback(() => {
+    commit({ ...storeRef.current, sound: !storeRef.current.sound })
+  }, [commit])
+
+  const spec = useMemo(() => specFor(config), [config])
+  const support = useMemo(() => metricSupportFor(spec.channel, spec.onset), [spec])
+  const pool = useMemo(() => selectPool(config.sets, config.script), [config.sets, config.script])
+
+  /**
+   * 跨场次历史 —— 调度器的先验。
+   *
+   * 范围是 drill，不是通道：点选认读与听音选字的通道都是 tap，
+   * 但难度不同。没有它，每一组都只是孤立的一次测量。
+   */
+  const history = useMemo(
+    () =>
+      buildItemHistory(store.archive, spec.id, {
+        // 不测速度的 drill 只能按准确率毕业，否则这些项永远无法毕业
+        graduateRt: support.reactionTime ? undefined : null,
+      }),
+    [store.archive, spec.id, support.reactionTime],
+  )
 
   const sessionConfig = useMemo<SessionConfig>(
     () => ({
-      pool: selectPool(config.sets, config.script),
-      spec: specFor(config),
+      pool,
+      spec,
       schedule: DEFAULT_SCHEDULE,
-      durationMs: config.sprintSeconds > 0 ? config.sprintSeconds * 1000 : null,
+      // 不测吞吐的 drill 强制不限时：给一个不可比的时钟只会误导。
+      durationMs:
+        support.throughput && config.sprintSeconds > 0 ? config.sprintSeconds * 1000 : null,
       trialCap: null,
       seed,
+      prior: history.byItem,
     }),
-    [config, seed],
+    [pool, spec, support.throughput, config.sprintSeconds, seed, history.byItem],
   )
 
-  // 趋势必须按通道分组：不同通道的 ICPM 不可比。
   const trend = useMemo(
-    () => buildTrend(store.archive, config.channel),
-    [store.archive, config.channel],
+    () => buildTrend(store.archive, spec.id, support),
+    [store.archive, spec.id, support],
   )
+
+  const lifetime = useMemo(
+    () => computeLifetime(store.archive, spec.id, localDayKey, nowAtMount),
+    [store.archive, spec.id, nowAtMount],
+  )
+
+  const labelOf = useCallback(
+    (itemId: string) => {
+      const item = pool.find((candidate) => candidate.id === itemId)
+      return item ? { glyph: item.prompt, answer: spec.expectOf(item) } : null
+    },
+    [pool, spec],
+  )
+
+  const weakest = useMemo<PriorRow[]>(
+    () =>
+      rankWeakest(history, pool).flatMap((prior) => {
+        const label = labelOf(prior.itemId)
+        return label
+          ? [
+              {
+                itemId: prior.itemId,
+                ...label,
+                detail: `${Math.round(prior.accuracy * 100)}% · ${prior.attempts} 次`,
+              },
+            ]
+          : []
+      }),
+    [history, pool, labelOf],
+  )
+
+  const slowest = useMemo<PriorRow[]>(
+    () =>
+      rankSlowest(history, pool).flatMap((prior) => {
+        const label = labelOf(prior.itemId)
+        return label
+          ? [
+              {
+                itemId: prior.itemId,
+                ...label,
+                detail: `${Math.round(prior.medianRt)} ms · ${prior.attempts} 次`,
+              },
+            ]
+          : []
+      }),
+    [history, pool, labelOf],
+  )
+
+  const recent = useMemo<RecentRow[]>(() => {
+    const finished = [...store.archive.sessions].reverse().find((item) => item.drillId === spec.id)
+    if (!finished) {
+      return []
+    }
+
+    return finished.events
+      .slice(-RECENT_LIMIT)
+      .reverse()
+      .flatMap((event) => {
+        const label = labelOf(event.itemId)
+        return label
+          ? [{ itemId: event.itemId, ...label, ok: event.ok, given: event.response }]
+          : []
+      })
+  }, [store.archive, spec.id, labelOf])
 
   const handleFinish = useCallback(
     (session: ArchivedSession) => {
@@ -144,10 +253,20 @@ function App() {
     [commit],
   )
 
-  const themeButton = (
-    <button type="button" onPointerDown={toggle} className="px-2 py-1 underline">
-      {store.theme === 'system' ? '跟随系统' : store.theme === 'dark' ? '夜间' : '日间'}
-    </button>
+  const header = (
+    <>
+      <button
+        type="button"
+        onPointerDown={toggleSound}
+        aria-label={store.sound ? '关闭音效' : '打开音效'}
+        className="px-2 py-1"
+      >
+        {store.sound ? '🔊' : '🔇'}
+      </button>
+      <button type="button" onPointerDown={toggleTheme} className="px-2 py-1 underline">
+        {store.theme === 'system' ? '跟随' : store.theme === 'dark' ? '夜' : '日'}
+      </button>
+    </>
   )
 
   // 设置放在结果卡里，而不是挤进 drill 的头部：
@@ -156,13 +275,13 @@ function App() {
   const settings = (
     <div className="space-y-5">
       <Group label="练什么">
-        {RESPONSE_CHANNELS.map((channel) => (
+        {DRILLS.map((drill) => (
           <Chip
-            key={channel}
-            active={config.channel === channel}
-            onClick={() => setConfig((current) => withChannel(current, channel))}
+            key={drill}
+            active={config.drill === drill}
+            onClick={() => setConfig((current) => withDrill(current, drill))}
           >
-            {CHANNEL_LABELS[channel]}
+            {DRILL_LABELS[drill]}
           </Chip>
         ))}
       </Group>
@@ -191,8 +310,8 @@ function App() {
         ))}
       </Group>
 
-      {/* 选项数只对 tap 通道有意义 */}
-      {config.channel === 'tap' ? (
+      {/* 选项数只对带选项集的 drill 有意义 */}
+      {hasChoices(config.drill) ? (
         <Group label="选项数">
           {CHOICE_OPTIONS.map((size) => (
             <Chip
@@ -206,19 +325,29 @@ function App() {
         </Group>
       ) : null}
 
-      <Group label="时长">
-        {SPRINT_OPTIONS.map((seconds) => (
-          <Chip
-            key={seconds}
-            active={config.sprintSeconds === seconds}
-            onClick={() => setConfig((current) => ({ ...current, sprintSeconds: seconds }))}
-          >
-            {seconds === 0 ? '不限' : `${seconds}s`}
-          </Chip>
-        ))}
-      </Group>
+      {/* 时长只对测吞吐的 drill 有意义 */}
+      {support.throughput ? (
+        <Group label="时长">
+          {SPRINT_OPTIONS.map((seconds) => (
+            <Chip
+              key={seconds}
+              active={config.sprintSeconds === seconds}
+              onClick={() => setConfig((current) => ({ ...current, sprintSeconds: seconds }))}
+            >
+              {seconds === 0 ? '不限' : `${seconds}s`}
+            </Chip>
+          ))}
+        </Group>
+      ) : (
+        <p className="text-xs leading-5 text-muted-foreground">
+          这个 drill 不计时。出声用的是系统语音播报，它的播放起点无法可靠得知，
+          所以「反应时间」和「个/分」都测不准 —— 与其显示一个不可比的数字，不如不显示。
+          它仍然计入正确率。
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        <span className="underline" />
         <button type="button" onClick={handleExport} className="underline">
           导出档案
         </button>
@@ -237,8 +366,8 @@ function App() {
           />
         </label>
         <span>
-          {store.archive.sessions.filter((item) => item.channel === config.channel).length} 组已归档
-          （当前通道）
+          {store.archive.sessions.filter((item) => item.drillId === spec.id).length} 组已归档（当前
+          drill）
         </span>
       </div>
 
@@ -250,22 +379,42 @@ function App() {
     </div>
   )
 
+  const resultExtra = (
+    <div className="space-y-6">
+      <div className="rounded-2xl border bg-muted/20 p-4">
+        <StatsPanel
+          lifetime={lifetime}
+          showSlowest={support.reactionTime}
+          weakest={weakest}
+          slowest={slowest}
+          recent={recent}
+          questionIsAudio={spec.modality === 'audio'}
+        />
+      </div>
+      <div className="rounded-2xl border bg-muted/20 p-4">{settings}</div>
+    </div>
+  )
+
   return (
     <Drill
-      key={`${configKey(config)}#${seed}`}
+      key={`${toSearch(config)}#${seed}`}
       sessionConfig={sessionConfig}
       trend={trend}
-      header={themeButton}
-      resultExtra={settings}
+      header={header}
+      resultExtra={resultExtra}
+      soundEnabled={store.sound}
       onFinish={handleFinish}
       onRestart={restart}
     />
   )
 }
 
-/** 换通道时把选项数复位到默认：打字/朗读不使用选项集。 */
-function withChannel(config: DrillUrl, channel: ResponseChannel): DrillUrl {
-  return { ...config, channel, choiceSize: channel === 'tap' ? 4 : config.choiceSize }
+/**
+ * 换 drill 时把选项数复位到默认（打字/朗读不使用选项集），
+ * 并丢弃历史参数 `ch` —— 统一以 `drill` 为准。
+ */
+function withDrill(config: DrillUrl, drill: DrillId): DrillUrl {
+  return { ...config, drill, choiceSize: hasChoices(drill) ? 4 : config.choiceSize }
 }
 
 function toggleSet(config: DrillUrl, set: KanaSet): DrillUrl {

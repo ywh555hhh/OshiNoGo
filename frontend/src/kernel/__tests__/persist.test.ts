@@ -11,6 +11,7 @@ const archive: Archive = {
       startedAt: 1000,
       endedAt: 61_000,
       durationMs: 60_000,
+      drillId: 'kana-recognition',
       channel: 'tap',
       events: [
         {
@@ -140,11 +141,13 @@ describe('档案 —— v1 → v2 迁移（通道是 v2 才引入的）', () => 
     expect(restored?.version).toBe(ARCHIVE_VERSION)
     expect(restored?.sessions[0].channel).toBe('tap')
     expect(restored?.sessions[0].events[0].channel).toBe('tap')
+    // v1/v2 只有一个 drill，所以它的 id 就等于当时的通道名
+    expect(restored?.sessions[0].drillId).toBe('tap')
   })
 
   it('读进来的一律升级到当前版本', () => {
     const restored = deserializeArchive(JSON.stringify(v1))
-    expect(restored?.version).toBe(2)
+    expect(restored?.version).toBe(ARCHIVE_VERSION)
   })
 
   it('未知版本仍然拒绝', () => {
@@ -174,6 +177,11 @@ describe('档案 —— 通道完整性', () => {
     expect(deserializeArchive(JSON.stringify(tampered))).toBeNull()
   })
 
+  it('drillId 非法则拒绝', () => {
+    const bad = { ...archive, sessions: [{ ...archive.sessions[0], drillId: '' }] }
+    expect(deserializeArchive(JSON.stringify(bad))).toBeNull()
+  })
+
   it('一致的 speak 档案是合法的', () => {
     const spoke: Archive = {
       version: ARCHIVE_VERSION,
@@ -184,6 +192,7 @@ describe('档案 —— 通道完整性', () => {
           startedAt: 0,
           endedAt: 1000,
           durationMs: 1000,
+          drillId: 'kana-speaking',
           channel: 'speak',
           events: [
             {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Archive, ArchivedSession, ResponseChannel, TrialEvent } from '@/kernel'
-import { ARCHIVE_VERSION } from '@/kernel'
+import { ARCHIVE_VERSION, metricSupportFor } from '@/kernel'
 
 import {
   MAX_ARCHIVED_SESSIONS,
@@ -30,11 +30,13 @@ function session(
   count = 30,
   durationMs: number | null = 60_000,
   channel: ResponseChannel = 'tap',
+  drillId: string = channel,
 ): ArchivedSession {
   return {
     startedAt: 0,
     endedAt: durationMs,
     durationMs,
+    drillId,
     channel,
     events: events(count, 400, channel),
   }
@@ -76,6 +78,11 @@ describe('appendSession', () => {
   })
 })
 
+/** tap 通道 + 画面起表：三个指标全部成立。 */
+const TAP_SUPPORT = metricSupportFor('tap', 'paint')
+/** tap 通道 + TTS 出声：onset 不可知，吞吐不成立。 */
+const NO_SPEED_SUPPORT = metricSupportFor('tap', 'audio-unknown')
+
 describe('buildTrend', () => {
   it('样本不足的组不进趋势', () => {
     const archive: Archive = {
@@ -83,7 +90,7 @@ describe('buildTrend', () => {
       sessions: [session(10), session(30)],
     }
 
-    expect(buildTrend(archive, 'tap')).toHaveLength(1)
+    expect(buildTrend(archive, 'tap', TAP_SUPPORT)).toHaveLength(1)
   })
 
   it('保留时间顺序，并带上 ICPM 与正确率', () => {
@@ -92,7 +99,7 @@ describe('buildTrend', () => {
       sessions: [session(30), session(30)],
     }
 
-    const trend = buildTrend(archive, 'tap')
+    const trend = buildTrend(archive, 'tap', TAP_SUPPORT)
 
     expect(trend).toHaveLength(2)
     expect(trend[0].icpm).toBeCloseTo(30, 5)
@@ -100,32 +107,43 @@ describe('buildTrend', () => {
     expect(trend[0].selfReported).toBe(false)
   })
 
-  it('必须按通道过滤 —— 把 tap 和 type 画在同一条趋势上等于在比较不可比的东西', () => {
+  it('必须按 drill 过滤 —— 同通道的不同 drill 不可比', () => {
+    // 点选认读与听音选字的作答通道都是 tap，但刺激完全不同。
+    // 用通道当范围键会把两者画进同一条趋势。
     const archive: Archive = {
       ...emptyArchive(),
-      sessions: [session(30, 60_000, 'tap'), session(30, 60_000, 'type')],
+      sessions: [
+        session(30, 60_000, 'tap', 'kana-tap'),
+        session(30, 60_000, 'tap', 'kana-dictation'),
+      ],
     }
 
-    expect(buildTrend(archive, 'tap')).toHaveLength(1)
-    expect(buildTrend(archive, 'type')).toHaveLength(1)
-    expect(buildTrend(archive, 'speak')).toHaveLength(0)
+    expect(buildTrend(archive, 'kana-tap', TAP_SUPPORT)).toHaveLength(1)
+    expect(buildTrend(archive, 'kana-dictation', TAP_SUPPORT)).toHaveLength(1)
+    expect(buildTrend(archive, 'kana-type', TAP_SUPPORT)).toHaveLength(0)
   })
 
-  it('通道不一致的档案不会混进趋势（session 说 type、事件说 tap）', () => {
+  it('不测吞吐的 drill 直接没有趋势 —— 与其画一排零，不如什么都不画', () => {
+    const archive: Archive = { ...emptyArchive(), sessions: [session(30)] }
+
+    expect(buildTrend(archive, 'tap', NO_SPEED_SUPPORT)).toEqual([])
+  })
+
+  it('事件通道与 session 不一致时不会混进趋势', () => {
     // persist 层会直接拒绝这种档案；万一它绕过来了，趋势层也不会把两边的数混算。
     const inconsistent: Archive = {
       ...emptyArchive(),
-      sessions: [{ ...session(30, 60_000, 'tap'), channel: 'type' }],
+      sessions: [{ ...session(30, 60_000, 'tap'), events: events(30, 400, 'type') }],
     }
 
-    expect(buildTrend(inconsistent, 'type')).toHaveLength(0)
-    expect(buildTrend(inconsistent, 'tap')).toHaveLength(0)
+    expect(buildTrend(inconsistent, 'tap', TAP_SUPPORT)).toHaveLength(0)
   })
 
   it('自评通道的趋势会标明自评', () => {
+    const speakSupport = metricSupportFor('speak', 'paint')
     const archive: Archive = { ...emptyArchive(), sessions: [session(30, 60_000, 'speak')] }
 
-    const trend = buildTrend(archive, 'speak')
+    const trend = buildTrend(archive, 'speak', speakSupport)
     expect(trend).toHaveLength(1)
     expect(trend[0].selfReported).toBe(true)
     // 自评没有机器可信的响应区间，所以不产生速度指标（趋势只有 icpm / accuracy）
@@ -188,10 +206,19 @@ describe('loadState', () => {
 
   it('存了再读是同一份', () => {
     installStorage()
-    const state = { theme: 'dark' as const, archive: { ...emptyArchive(), sessions: [session()] } }
+    const state = {
+      theme: 'dark' as const,
+      sound: false,
+      archive: { ...emptyArchive(), sessions: [session()] },
+    }
 
     expect(saveState(state)).toBe(true)
     expect(loadState('kana-recognition').state).toEqual(state)
+  })
+
+  it('音效开关缺省为开', () => {
+    installStorage({ 'oshinogo.v1': JSON.stringify({ theme: 'dark', archive: emptyArchive() }) })
+    expect(loadState('kana-recognition').state.sound).toBe(true)
   })
 
   it('localStorage 抛异常时返回 false 而不是崩溃（无痕模式）', () => {

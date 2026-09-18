@@ -1,6 +1,5 @@
 import { KANA_SETS, type KanaSet } from '@/drills/kana/kana'
 import type { ScriptMode } from '@/drills/kana/specs'
-import { RESPONSE_CHANNELS, type ResponseChannel } from '@/kernel'
 
 /**
  * URL 即配置。
@@ -9,18 +8,29 @@ import { RESPONSE_CHANNELS, type ResponseChannel } from '@/kernel'
  * 这对「免费资源站」是双重收益——既省掉一整块配置 UI，又天然可传播。
  */
 
+/**
+ * 四个 drill。
+ *
+ * 注意这里选的是 **drill**，不是「作答通道」：一个 drill = 刺激 + 通道 的组合。
+ * 听音选字的作答通道也是点按，但它练的是另一个方向的知识，指标有效性也不同。
+ */
+export const DRILLS = ['tap', 'type', 'speak', 'listen'] as const
+export type DrillId = (typeof DRILLS)[number]
+
+export const DRILL_LABELS: Record<DrillId, string> = {
+  tap: '看形选音',
+  type: '看形打 romaji',
+  speak: '看形读出来',
+  listen: '听音选形',
+}
+
 export interface DrillUrl {
   /** 配置对象不该被就地修改，所以是 readonly。 */
   sets: readonly KanaSet[]
   script: ScriptMode
-  /**
-   * 作答通道。
-   *
-   * 三个通道练的是不同方向的知识，不可互相替代（接受性–产出性落差）。
-   * 但它们的可测性不同，见 kernel/channels.ts 的 METRIC_SUPPORT。
-   */
-  channel: ResponseChannel
-  /** 选项总数（含正确项）。只对 tap 通道有意义。固定 N 才能让 RT 跨池可比。 */
+  /** 选哪个 drill（刺激 + 作答通道的组合）。 */
+  drill: DrillId
+  /** 选项总数（含正确项）。只对带选项的 drill 有意义。 */
   choiceSize: number
   /** 冲刺秒数；0 = 无时限。 */
   sprintSeconds: number
@@ -29,21 +39,20 @@ export interface DrillUrl {
 export const DEFAULT_DRILL_URL: DrillUrl = {
   sets: ['seion'],
   script: 'hiragana',
-  channel: 'tap',
+  drill: 'tap',
   choiceSize: 4,
   sprintSeconds: 60,
-}
-
-export const CHANNEL_LABELS: Record<ResponseChannel, string> = {
-  tap: '选读音',
-  type: '打 romaji',
-  speak: '读出来',
 }
 
 export const CHOICE_SIZE_RANGE = { min: 2, max: 8 } as const
 export const SPRINT_RANGE = { min: 0, max: 600 } as const
 
 const SCRIPT_MODES: readonly ScriptMode[] = ['hiragana', 'katakana', 'both']
+
+/** 这个 drill 是否使用选项集。 */
+export function hasChoices(drill: DrillId): boolean {
+  return drill === 'tap' || drill === 'listen'
+}
 
 function clampInt(raw: string | null, fallback: number, min: number, max: number): number {
   // URLSearchParams 对 `?n=` 这种空值返回 ''，不是 null。
@@ -82,9 +91,13 @@ function parseScript(raw: string | null): ScriptMode {
   return SCRIPT_MODES.find((mode) => mode === value) ?? DEFAULT_DRILL_URL.script
 }
 
-function parseChannel(raw: string | null): ResponseChannel {
-  const value = raw?.trim().toLowerCase()
-  return RESPONSE_CHANNELS.find((channel) => channel === value) ?? DEFAULT_DRILL_URL.channel
+/**
+ * `ch` 是历史参数名（当时只有「作答通道」这一个维度），继续接受，
+ * 以免之前分享出去的链接失效。
+ */
+function parseDrill(params: URLSearchParams): DrillId {
+  const raw = (params.get('drill') ?? params.get('ch'))?.trim().toLowerCase()
+  return DRILLS.find((drill) => drill === raw) ?? DEFAULT_DRILL_URL.drill
 }
 
 /**
@@ -97,7 +110,7 @@ export function parseDrillUrl(search: string): DrillUrl {
   return {
     sets: parseSets(params.get('set')),
     script: parseScript(params.get('script')),
-    channel: parseChannel(params.get('ch')),
+    drill: parseDrill(params),
     choiceSize: clampInt(
       params.get('n'),
       DEFAULT_DRILL_URL.choiceSize,
@@ -124,10 +137,10 @@ export function toSearch(config: DrillUrl): string {
   if (config.script !== DEFAULT_DRILL_URL.script) {
     params.set('script', config.script)
   }
-  if (config.channel !== DEFAULT_DRILL_URL.channel) {
-    params.set('ch', config.channel)
+  if (config.drill !== DEFAULT_DRILL_URL.drill) {
+    params.set('drill', config.drill)
   }
-  if (config.choiceSize !== DEFAULT_DRILL_URL.choiceSize) {
+  if (config.choiceSize !== DEFAULT_DRILL_URL.choiceSize && hasChoices(config.drill)) {
     params.set('n', String(config.choiceSize))
   }
   if (config.sprintSeconds !== DEFAULT_DRILL_URL.sprintSeconds) {
@@ -136,9 +149,4 @@ export function toSearch(config: DrillUrl): string {
 
   const search = params.toString()
   return search ? `?${search}` : ''
-}
-
-/** 渲染层的 key：配置一变就重挂载，整组重开。 */
-export function configKey(config: DrillUrl): string {
-  return toSearch(config)
 }

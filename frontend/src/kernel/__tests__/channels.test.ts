@@ -67,7 +67,8 @@ describe('METRIC_SUPPORT —— R1 的可执行形式', () => {
   })
 })
 
-describe('isSelfReported', () => {  it('只认自评的两个 reason', () => {
+describe('isSelfReported', () => {
+  it('只认自评的两个 reason', () => {
     expect(isSelfReported('self-pass')).toBe(true)
     expect(isSelfReported('self-fail')).toBe(true)
     expect(isSelfReported('correct')).toBe(false)
